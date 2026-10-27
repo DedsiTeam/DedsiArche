@@ -1,12 +1,42 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- 父项目统一管理依赖版本、编译配置和业务模块。 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>4.1.2</version><relativePath/></parent>
-  <groupId>com.dedsi.arche</groupId><artifactId>dedsi-arche</artifactId><version>1.0.0-SNAPSHOT</version><packaging>pom</packaging>
-  <name>DedsiArche</name><description>模块化单体 Web API 模板</description>
-  <properties><java.version>26</java.version><springdoc.version>3.2.0</springdoc.version><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
-  <modules><module>dedsi-arche-common</module><module>dedsi-arche-system</module><module>dedsi-arche-host</module></modules>
-  <dependencyManagement><dependencies>
-    <dependency><groupId>${project.groupId}</groupId><artifactId>dedsi-arche-common</artifactId><version>${project.version}</version></dependency>
-    <dependency><groupId>${project.groupId}</groupId><artifactId>dedsi-arche-system</artifactId><version>${project.version}</version></dependency>
-  </dependencies></dependencyManagement>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.2</version>
+    <relativePath />
+  </parent>
+  <groupId>com.dedsi.arche</groupId>
+  <artifactId>dedsi-arche</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>DedsiArche</name>
+  <description>模块化单体 Web API 模板</description>
+  <properties>
+    <java.version>26</java.version>
+    <springdoc.version>3.2.0</springdoc.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <modules>
+    <module>dedsi-arche-common</module>
+    <module>dedsi-arche-system</module>
+    <module>dedsi-arche-host</module>
+  </modules>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>dedsi-arche-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>dedsi-arche-system</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>

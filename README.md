@@ -61,7 +61,15 @@ docker compose up -d --wait
 也可以使用标准 Maven 命令（需已安装 Maven，或使用本模板 mvnw.cmd 的完整路径）：
 
 ```powershell
-mvn archetype:generate "-DarchetypeGroupId=com.dedsi" "-DarchetypeArtifactId=dedsi-arche" "-DarchetypeVersion=1.0.0" "-DgroupId=com.example" "-DartifactId=my-shop" "-Dpackage=com.example.myshop" "-Dversion=0.0.1-SNAPSHOT" "-DinteractiveMode=false"
+mvn archetype:generate `
+    "-DarchetypeGroupId=com.dedsi" `
+    "-DarchetypeArtifactId=dedsi-arche" `
+    "-DarchetypeVersion=1.0.0" `
+    "-DgroupId=com.example" `
+    "-DartifactId=my-shop" `
+    "-Dpackage=com.example.myshop" `
+    "-Dversion=0.0.1-SNAPSHOT" `
+    "-DinteractiveMode=false"
 ```
 
 ## 添加业务模块
@@ -77,8 +85,8 @@ mvn archetype:generate "-DarchetypeGroupId=com.dedsi" "-DarchetypeArtifactId=ded
 
 ## Scalar 接口文档
 
-启动 Host 后访问 `http://localhost:8080/scalar`，OpenAPI JSON 位于 `/v3/api-docs`，System 分组位于 `/v3/api-docs/system`。
-通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/api/users/me`；不要重复填写 `Bearer ` 前缀。
+启动 Host 后访问 `http://localhost:8080/dedsi-arche-api/scalar`，OpenAPI JSON 位于 `/dedsi-arche-api/v3/api-docs`，System 分组位于 `/dedsi-arche-api/v3/api-docs/system`。
+通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
 默认开启文档，设置环境变量 `DOCS_ENABLED=false` 可同时关闭页面与 OpenAPI 端点。
 采用 springdoc-openapi 3.2.0 的 WebMVC Scalar Starter，不使用 Swagger UI。
 Host 定义标题和认证方案，业务模块在 Controller/DTO 上声明中文说明，并通过 GroupedOpenApi 注册分组。

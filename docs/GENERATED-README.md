@@ -13,7 +13,7 @@ docker compose up -d --wait
 ```
 
 打开另一个终端执行 `.\scripts\smoke-test.ps1` 验证。脚本会新增一个随机测试用户。
-健康检查：`http://localhost:8080/actuator/health`。
+健康检查：`http://localhost:8080/dedsi-arche-api/actuator/health`。
 构建测试：`.\mvnw.cmd clean verify`，默认 H2 测试无需 Docker。
 停止依赖：`docker compose stop`。`docker compose down` 保留数据卷；不要随意添加 `-v`。
 
@@ -28,12 +28,12 @@ API 负责事务、用例编排和 DTO 转换；Domain 放实体、仓储契约�
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
-| POST | /api/users/register | username、displayName、password 注册 |
-| POST | /api/users/login | username、password 登录 |
-| POST | /api/users/refresh | refreshToken 换取新令牌 |
-| POST | /api/users/logout | refreshToken 注销刷新会话 |
-| GET | /api/users/me | Bearer JWT 查询自己 |
-| PATCH | /api/users/me | Bearer JWT 修改 displayName |
+| POST | /dedsi-arche-api/api/users/register | username、displayName、password 注册 |
+| POST | /dedsi-arche-api/api/users/login | username、password 登录 |
+| POST | /dedsi-arche-api/api/users/refresh | refreshToken 换取新令牌 |
+| POST | /dedsi-arche-api/api/users/logout | refreshToken 注销刷新会话 |
+| GET | /dedsi-arche-api/api/users/me | Bearer JWT 查询自己 |
+| PATCH | /dedsi-arche-api/api/users/me | Bearer JWT 修改 displayName |
 
 用户名为 3～50 位英文字母、数字、下划线，统一小写。密码 12～64 字符，UTF-8 最多 72 字节，BCrypt 存储。
 JWT 有效期 15 分钟；刷新令牌有效期 7 天，数据库仅存 SHA-256，刷新时旧令牌撤销且新令牌生成在同一事务内。
@@ -45,6 +45,22 @@ JWT 有效期 15 分钟；刷新令牌有效期 7 天，数据库仅存 SHA-256�
 ## 数据与 Redis
 
 Flyway 创建 sys_users 和认证内部表 sys_refresh_sessions，Hibernate 仅 validate，禁止自动修改生产表结构。
+
+| 表或字段 | 说明 |
+|---|---|
+| `sys_users` | 用户聚合；`username` 具有唯一约束 |
+| `password_hash` | BCrypt 密码哈希，不保存明文密码 |
+| `enabled` | 控制用户能否登录和修改资料 |
+| `created_at` | 用户注册时间，带时区 |
+| `version` | Hibernate 乐观锁版本 |
+| `sys_refresh_sessions` | 刷新会话；`user_id` 外键指向用户 |
+| `token_hash` | 刷新令牌的唯一 SHA-256 摘要 |
+| `expires_at` / `revoked` | 会话有效期及撤销状态 |
+| 会话索引 | 按用户查会话、按过期时间清理记录 |
+
+已执行的版本化 SQL 迁移保持原样，包括注释和排版，以免改变 Flyway 校验和。
+表结构或数据库注释的后续变更应新增迁移版本。
+
 Redis 已配置连接、独立密码与 Actuator 健康检查；当前用户查询直接读取数据库，不缓存密码或认证决策。
 数据库与 Redis 仅映射至 127.0.0.1 的 54329、63799。不同项目并行运行时调整 compose 端口及 DB_URL/REDIS_PORT。
 数据库时间使用 Instant / timestamptz，API 输出 ISO-8601 UTC。没有复用其他仓库的本地时间规则。
@@ -68,8 +84,8 @@ Redis 密码、数据库密码更换后需同步更新现有实例；已有 Post
 
 ## Scalar 接口文档
 
-启动 Host 后访问 `http://localhost:8080/scalar`，OpenAPI JSON 位于 `/v3/api-docs`，System 分组位于 `/v3/api-docs/system`。
-通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/api/users/me`；不要重复填写 `Bearer ` 前缀。
+启动 Host 后访问 `http://localhost:8080/dedsi-arche-api/scalar`，OpenAPI JSON 位于 `/dedsi-arche-api/v3/api-docs`，System 分组位于 `/dedsi-arche-api/v3/api-docs/system`。
+通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
 默认开启文档，设置环境变量 `DOCS_ENABLED=false` 可同时关闭页面与 OpenAPI 端点。
 采用 springdoc-openapi 3.2.0 的 WebMVC Scalar Starter，不使用 Swagger UI。
 Host 定义标题和认证方案，业务模块在 Controller/DTO 上声明中文说明，并通过 GroupedOpenApi 注册分组。

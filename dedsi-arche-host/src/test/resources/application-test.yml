@@ -1,16 +1,20 @@
+# 自动化测试使用独立内存数据库，不写入本地 PostgreSQL。
 spring:
   datasource:
     url: jdbc:h2:mem:dedsi;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa
     password:
+  # 每次测试上下文创建和销毁表结构，不运行生产迁移。
   jpa:
     hibernate:
       ddl-auto: create-drop
   flyway:
     enabled: false
+# 固定密钥仅用于测试环境，不能用于部署。
 app:
   jwt:
     secret: dGVzdC1vbmx5LXNlY3JldC0zMi1ieXRlcy1taW5pbXVtISE=
+# 测试上下文无需启动 Redis。
 management:
   health:
     redis:
