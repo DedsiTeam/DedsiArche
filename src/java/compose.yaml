@@ -1,0 +1,46 @@
+# 本地开发依赖；凭据从后端根目录的 .env 读取。
+# 保留移动目录前的默认项目名；仍可通过 -p 或 COMPOSE_PROJECT_NAME 覆盖。
+name: dedsiarche
+services:
+  # PostgreSQL 保存用户聚合和刷新会话，端口仅绑定本机。
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_DB: dedsi_arche
+      POSTGRES_USER: dedsi
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run scripts/init-local.ps1 first}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - "postgres-data:/var/lib/postgresql"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U dedsi -d dedsi_arche
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  # Redis 开启 AOF 持久化，并使用环境变量中的密码认证。
+  redis:
+    image: redis:8.10.2
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run scripts/init-local.ps1 first}
+    command:
+      - sh
+      - -c
+      - 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    ports:
+      - "127.0.0.1:63799:6379"
+    volumes:
+      - "redis-data:/data"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep PONG'
+      interval: 5s
+      timeout: 3s
+      retries: 20
+# 命名卷保留容器重建后的数据。
+volumes:
+  postgres-data:
+  redis-data:

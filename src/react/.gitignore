@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output and caches
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local environment
+.env
+.env.*
+!.env.example
+!.env.sample

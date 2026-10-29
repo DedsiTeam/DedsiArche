@@ -1,0 +1,26 @@
+:root {
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #172554;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { margin: 0; min-width: 320px; }
+.app-layout { min-height: 100vh; background: #f5f7fb; }
+.app-header { display: flex; align-items: center; gap: 48px; padding: 0 6%; background: white; border-bottom: 1px solid #e8ecf3; }
+.brand { color: #172554; font-size: 20px; font-weight: 700; white-space: nowrap; }
+.app-header .ant-menu { flex: 1; min-width: 0; border-bottom: none; }
+.app-content { width: 100%; max-width: 1200px; margin: 0 auto; padding: 64px 32px; }
+.welcome { padding: 40px; border: 1px solid #e3e9f6; border-radius: 16px; background: linear-gradient(120deg, #fff, #edf2ff); }
+.eyebrow { color: #3157d5; font-size: 12px; letter-spacing: 3px; font-weight: 600; }
+.foundation-card { height: 100%; }
+.app-footer { text-align: center; background: transparent; }
+
+@media (max-width: 600px) {
+  .app-header { gap: 20px; padding: 0 20px; }
+  .app-content { padding: 32px 20px; }
+  .welcome { padding: 24px; }
+  .welcome h1 { font-size: 28px; }
+}

@@ -1,0 +1,25 @@
+# 仅部署 Host；PostgreSQL 和 Redis 使用外部实例。
+services:
+  host:
+    image: dedsi-arche-host:${IMAGE_TAG:-1.0.0}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    environment:
+      SERVER_PORT: "8080"
+      DB_URL: ${DB_URL:?Set DB_URL in the deployment env file}
+      DB_USER: ${DB_USER:?Set DB_USER in the deployment env file}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the deployment env file}
+      REDIS_HOST: ${REDIS_HOST:?Set REDIS_HOST in the deployment env file}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in the deployment env file}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the deployment env file}
+      DOCS_ENABLED: ${DOCS_ENABLED:-false}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
