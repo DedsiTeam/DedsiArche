@@ -1,6 +1,6 @@
-<#
+﻿<#
 .SYNOPSIS
-构建并通过 Aspire 启动 Java、React（Bun）、PostgreSQL、Redis；复用现有数据卷。
+构建并通过 Aspire 启动 Java、React（Bun）、PostgreSQL、Redis；使用 C:\Dockers 中已迁移的数据。
 #>
 $ErrorActionPreference = 'Stop'
 $aspireRoot = $PSScriptRoot
@@ -11,30 +11,29 @@ $jar = Join-Path $javaRoot 'dedsi-arche-host/target/dedsi-arche-host-1.0.0-SNAPS
 foreach ($command in @('docker', 'dotnet', 'mvn.cmd', 'java', 'bun')) {
     if (!(Get-Command $command -ErrorAction SilentlyContinue)) { throw "缺少命令：$command" }
 }
-if (!(Test-Path -LiteralPath (Join-Path $javaRoot '.env'))) { throw '缺少 src/java/.env；请使用原数据库凭据。' }
-
-function Invoke-Docker {
-    param([string[]]$DockerArguments)
-    $result = & docker @DockerArguments
-    if ($LASTEXITCODE -ne 0) { throw 'Docker 操作失败，已停止启动流程。' }
-    return $result
+$configPath = Join-Path $aspireRoot 'DedsiArche.AppHost/appsettings.json'
+if (!(Test-Path -LiteralPath $configPath)) {
+    throw '缺少 AppHost/appsettings.json，请根据 appsettings.example.json 配置现有数据库凭据。'
 }
-
-# 先确认卷和占用者，再进行构建；不允许 Docker 自动新建空卷替代旧数据。
-$legacyContainers = @()
-$mappings = @(
-    @{ Volume = 'dedsiarche_postgres-data'; Old = 'dedsiarche-postgres-1'; New = 'dedsiarche-aspire-postgres' },
-    @{ Volume = 'dedsiarche_redis-data'; Old = 'dedsiarche-redis-1'; New = 'dedsiarche-aspire-redis' }
-)
-foreach ($mapping in $mappings) {
-    Invoke-Docker -DockerArguments @('volume', 'inspect', $mapping.Volume, '--format', '{{.Name}}') | Out-Null
-    $holders = @(Invoke-Docker -DockerArguments @('ps', '--filter', "volume=$($mapping.Volume)", '--format', '{{.Names}}'))
-    foreach ($holder in $holders) {
-        if ($holder -eq $mapping.Old) { $legacyContainers += $holder }
-        elseif ($holder -ne $mapping.New) { throw "数据卷 $($mapping.Volume) 被其他容器 $holder 占用，未执行切换。" }
+$config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+foreach ($name in @('Postgres', 'Redis', 'Backend', 'Frontend', 'Dashboard', 'Otlp', 'ResourceService')) {
+    $port = [int]$config.Ports.$name
+    if ($port -lt 1 -or $port -gt 65535) { throw "请配置有效端口 Ports:$name" }
+}
+$backendPort = [int]$config.Ports.Backend
+$frontendPort = [int]$config.Ports.Frontend
+# 已迁移的数据文件必须存在，避免误用空目录。
+foreach ($dataFile in @(
+    (Join-Path $config.PostgreSQL.DataDirectory $config.PostgreSQL.DataFile),
+    (Join-Path $config.Redis.DataDirectory $config.Redis.DataFile)
+)) {
+    if (!(Test-Path -LiteralPath $dataFile -PathType Leaf)) {
+        throw "缺少现有数据文件：$dataFile。请恢复迁移数据后再启动。"
     }
 }
-foreach ($port in @(11519, 11520, 11521)) {
+& docker info --format '{{.ServerVersion}}' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw '请先启动 Docker Desktop。' }
+foreach ($port in @($config.Ports.Dashboard, $config.Ports.Otlp, $config.Ports.ResourceService)) {
     if (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) {
         throw "端口 $port 已占用，请先关闭已运行的 Aspire。"
     }
@@ -44,20 +43,20 @@ foreach ($port in @(11519, 11520, 11521)) {
 $backendProcesses = @(Get-CimInstance Win32_Process -Filter "name = 'java.exe'" | Where-Object {
     $_.CommandLine -like '*-jar*' -and $_.CommandLine.Contains($jar)
 })
-$listeners = @(Get-NetTCPConnection -LocalPort 11518 -State Listen -ErrorAction SilentlyContinue)
+$listeners = @(Get-NetTCPConnection -LocalPort $backendPort -State Listen -ErrorAction SilentlyContinue)
 foreach ($listener in $listeners) {
     if ($listener.OwningProcess -notin $backendProcesses.ProcessId) {
-        throw '11518 被其他进程占用（可能为 IDEA 启动的后端），请先手动停止该进程。'
+        throw "$backendPort 被其他进程占用（可能为 IDEA 启动的后端），请先手动停止该进程。"
     }
 }
 
 # 仅接管当前仓库的 Vite 进程；未知端口占用者保持不动。
 $frontendProcesses = @()
-foreach ($ownerId in @(Get-NetTCPConnection -LocalPort 11126 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique)) {
+foreach ($ownerId in @(Get-NetTCPConnection -LocalPort $frontendPort -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique)) {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId"
     $vitePath = Join-Path $reactRoot 'node_modules/vite/bin/vite.js'
     if (!$process.CommandLine -or !$process.CommandLine.Replace('/', '\').Contains($vitePath.Replace('/', '\'))) {
-        throw '11126 被其他进程占用，请先手动释放端口。'
+        throw "$frontendPort 被其他进程占用，请先手动释放端口。"
     }
     $frontendProcesses += $process
 }
@@ -72,17 +71,6 @@ try {
     & dotnet build $project
     if ($LASTEXITCODE -ne 0) { throw 'AppHost 构建失败，现有服务未停止。' }
 } finally { Pop-Location }
-
-# 首次从 Compose 切换时先保存逻辑备份。失败则不停止原服务。
-if ('dedsiarche-postgres-1' -in $legacyContainers) {
-    $backupDirectory = Join-Path $aspireRoot '.local/backups'
-    New-Item -ItemType Directory -Path $backupDirectory -Force | Out-Null
-    $backupName = 'dedsi_arche-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.dump'
-    $containerBackup = '/tmp/' + $backupName
-    Invoke-Docker -DockerArguments @('exec', 'dedsiarche-postgres-1', 'pg_dump', '-U', 'dedsi', '-d', 'dedsi_arche', '-Fc', '-f', $containerBackup) | Out-Null
-    Invoke-Docker -DockerArguments @('cp', "dedsiarche-postgres-1:$containerBackup", (Join-Path $backupDirectory $backupName)) | Out-Null
-    Write-Host "数据库备份已保存：$backupDirectory/$backupName"
-}
 
 foreach ($backend in $backendProcesses) {
     Stop-Process -Id $backend.ProcessId -ErrorAction SilentlyContinue
@@ -99,13 +87,9 @@ foreach ($frontend in $frontendProcesses) {
     Stop-Process -Id $frontend.ProcessId -ErrorAction SilentlyContinue
     Wait-Process -Id $frontend.ProcessId -Timeout 30 -ErrorAction SilentlyContinue
 }
-foreach ($container in $legacyContainers) {
-    Invoke-Docker -DockerArguments @('stop', '--time', '60', $container) | Out-Null
-}
-
 Push-Location $aspireRoot
 try {
-    Write-Host '正在启动 Aspire。Dashboard http://localhost:11519；前端 http://localhost:11126；后端 http://localhost:11518/dedsi-arche-api'
+    Write-Host "正在启动 Aspire。Dashboard http://localhost:$($config.Ports.Dashboard)；前端 http://localhost:$frontendPort；后端 http://localhost:$backendPort$($config.Backend.ContextPath)"
     & dotnet run --no-build --project $project --launch-profile http
-    if ($LASTEXITCODE -ne 0) { throw 'Aspire 启动失败。数据卷保留；按 README 中的步骤恢复原有容器。' }
+    if ($LASTEXITCODE -ne 0) { throw 'Aspire 启动失败。C:\Dockers 中的数据保留，请查看启动日志。' }
 } finally { Pop-Location }

@@ -9,7 +9,7 @@ spring:
     name: dedsi-arche
   # 默认连接 Aspire 管理的本地 PostgreSQL。
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:54329/dedsi_arche}
+    url: ${DB_URL:jdbc:postgresql://localhost:25473/dedsi_arche}
     username: ${DB_USER:dedsi}
     password: ${DB_PASSWORD}
   # 仅校验表结构，结构变更统一交给 Flyway。
@@ -21,7 +21,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:63799}
+      port: ${REDIS_PORT:28641}
       password: ${REDIS_PASSWORD}
   # 各业务模块的数据库迁移目录。
   flyway:

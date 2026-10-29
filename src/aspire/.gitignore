@@ -1,3 +1,4 @@
 **/bin/
 **/obj/
 .local/
+DedsiArche.AppHost/appsettings.json

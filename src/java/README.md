@@ -29,7 +29,7 @@ API 编排用例和转换 DTO，不设 Application、DO 或 ApiMapper。
 
 ## 运行示例
 
-通过 [Aspire 统一启动](../aspire/README.md) 后端、PostgreSQL 和 Redis：在仓库根目录运行 `src/aspire/start.ps1`，复用现有数据卷。Compose 配置已移除。
+通过 [Aspire 统一启动](../aspire/README.md) 后端、PostgreSQL 和 Redis：在仓库根目录运行 `src/aspire/start.ps1`，使用 C:\Dockers 中已迁移的数据。Compose 配置已移除。
 
 本页命令除另有说明外，均在后端根目录 `src/java` 执行。从仓库根目录打开终端时，先执行：
 
@@ -59,7 +59,7 @@ cd src/java
 启动前确保 Docker Desktop 与 Aspire 管理的依赖正在运行，并先停止 Aspire 中的 dedsi-arche-host，释放 11518 端口。
 首次使用仍需执行 `../scripts/init-local.ps1`；`.env` 不提交到 Git。
 
-Aspire 复用 `dedsiarche_postgres-data` 和 `dedsiarche_redis-data`。首次切换会停止旧依赖容器，但保留原容器和数据卷。
+Aspire 将 PostgreSQL 数据挂载到 `C:\Dockers\PostgreSql\DedsiArcheDB`，Redis 数据挂载到 `C:\Dockers\Redis\DedsiArche`。原命名卷和迁移备份保留，详见 Aspire 启动说明。
 
 ## 安装模板（类似 dotnet new install）
 
