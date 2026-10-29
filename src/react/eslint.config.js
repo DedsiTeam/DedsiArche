@@ -17,6 +17,12 @@ export default defineConfig([
     extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
   },
   {
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true, allowExportNames: ['buttonVariants', 'tabsListVariants'] }],
+    },
+  },
+  {
     files: ['vite.config.ts', 'eslint.config.js'],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },

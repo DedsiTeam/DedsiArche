@@ -17,6 +17,7 @@ import java.util.*;
  */
 @Component
 public class TokenService {
+    private final com.dedsi.arche.system.domain.users.UserRepository users;
 
     /**
      * 使用配置密钥签发 JWT 的编码器。
@@ -44,11 +45,13 @@ public class TokenService {
     public TokenService(
             JwtEncoder encoder,
             RefreshSessionRepository sessions,
+            com.dedsi.arche.system.domain.users.UserRepository users,
             @Value("${app.jwt.issuer}")
             String issuer
     ) {
         this.encoder = encoder;
         this.sessions = sessions;
+        this.users = users;
         this.issuer = issuer;
     }
 
@@ -70,7 +73,7 @@ public class TokenService {
      * 签发十五分钟访问令牌和七天刷新令牌，仅持久化刷新令牌哈希。
      */
     @Transactional
-    public Tokens issue(UUID userId) {
+    public Tokens issue(UUID userId, long credentialVersion) {
         Instant now = Instant.now();
         Instant expiry = now.plusSeconds(900);
         JwtClaimsSet claims =
@@ -82,6 +85,7 @@ public class TokenService {
                         .id(UUID.randomUUID().toString())
                         .audience(List.of("dedsi-api"))
                         .claim("scope", "profile")
+                        .claim("credential_version", credentialVersion)
                         .build();
         String access =
                 encoder.encode(
@@ -91,7 +95,7 @@ public class TokenService {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         String refresh = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        sessions.save(new RefreshSession(userId, hash(refresh), now.plus(Duration.ofDays(7))));
+        sessions.save(new RefreshSession(userId, hash(refresh), now.plus(Duration.ofDays(7)), credentialVersion));
         return new Tokens(access, expiry, refresh);
     }
 
@@ -107,6 +111,9 @@ public class TokenService {
             throw new BadCredentialsException("刷新令牌无效或已过期");
         }
         session.revoked = true;
+        if (users.findById(session.userId).filter(u -> u.getCredentialVersion() == session.credentialVersion).isEmpty()) {
+            throw new BadCredentialsException("登录凭据已失效");
+        }
         return session.userId;
     }
 
@@ -117,6 +124,12 @@ public class TokenService {
     public void revoke(String refresh) {
         sessions.lockByHash(hash(refresh)).ifPresent(s -> s.revoked = true);
     }
+
+    @Transactional
+    public void revokeAll(UUID userId) { sessions.revokeAllByUserId(userId); }
+
+    @Transactional
+    public void deleteSessions(UUID userId) { sessions.deleteAllByUserId(userId); }
 
     /**
      * 计算令牌的 SHA-256 十六进制摘要，避免明文凭据落库。

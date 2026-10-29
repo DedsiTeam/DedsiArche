@@ -29,7 +29,11 @@ API 编排用例和转换 DTO，不设 Application、DO 或 ApiMapper。
 
 ## 运行示例
 
+通过 [Aspire 统一启动](../aspire/README.md) 后端、PostgreSQL 和 Redis：在仓库根目录运行 `src/aspire/start.ps1`，复用现有数据卷。Compose 配置已移除。
+
 本页命令除另有说明外，均在后端根目录 `src/java` 执行。从仓库根目录打开终端时，先执行：
+
+公共脚本位于 `src/scripts`，会自动定位 `src/java`，不依赖执行时的工作目录。模板生成的独立项目仍保留其根目录下的 `scripts`。
 
 ```powershell
 cd src/java
@@ -38,12 +42,12 @@ cd src/java
 安装全局 Maven（当前验证版本 3.10.0），将其 bin 目录加入 PATH，配置 JAVA_HOME 为 JDK 26。使用 `mvn --version` 确认安装成功，启动 Docker Desktop，然后执行：
 
 ```powershell
-.\scripts\init-local.ps1
-docker compose up -d --wait
-.\scripts\run-local.ps1
+..\scripts\init-local.ps1
+# 先按 Aspire 启动说明启动依赖；独立运行后端时先停止 Aspire 中的 dedsi-arche-host
+..\scripts\run-local.ps1
 ```
 
-另一个终端也先进入 `src/java`，再执行 `.\scripts\smoke-test.ps1`。本地默认端口为 11518；如果设置了 `SERVER_PORT`，通过 `-BaseUrl` 指定对应地址。
+另一个终端也先进入 `src/java`，再执行 `..\scripts\smoke-test.ps1`。本地默认端口为 11518；如果设置了 `SERVER_PORT`，通过 `-BaseUrl` 指定对应地址。
 仅构建测试：`mvn clean verify`。
 详细 API、认证语义、环境变量和模块约定见 [使用说明](docs/GENERATED-README.md)。
 
@@ -52,15 +56,15 @@ docker compose up -d --wait
 在 IDEA 中直接打开 `src/java` 并导入其中的 `pom.xml`，选择 JDK 26，可直接运行 `DedsiArcheApplication` 主类，或选择 `DedsiArche Local` 点击 Run 或 Debug。
 如果打开整个仓库，请导入 `src/java/pom.xml`，并将 Spring Boot 运行配置的工作目录设置为 `$PROJECT_DIR$/src/java`；共享配置位于 `src/java/.run`，需确认已加载。直接打开 `src/java` 时，共享配置中的 `$PROJECT_DIR$` 无需调整。
 应用会从当前工作目录或其父目录加载 `.env` 中的数据库、Redis 和 JWT 密钥，支持工作目录为后端根目录 `src/java` 或 Host 模块目录，无需手工复制密码。运行配置中的同名环境变量会优先于 `.env`，请移除过期的密码配置。
-启动前确保 Docker Desktop 和 `docker compose up -d --wait` 启动的依赖正在运行，且 11518 端口空闲。
-首次使用仍需执行 `scripts/init-local.ps1`；`.env` 不提交到 Git。
+启动前确保 Docker Desktop 与 Aspire 管理的依赖正在运行，并先停止 Aspire 中的 dedsi-arche-host，释放 11518 端口。
+首次使用仍需执行 `../scripts/init-local.ps1`；`.env` 不提交到 Git。
 
-本地 Compose 项目名固定为 `dedsiarche`，沿用目录移动前的默认容器和数据卷命名。如果此前使用了自定义项目名，请继续通过 `-p` 或 `COMPOSE_PROJECT_NAME` 指定原名称。
+Aspire 复用 `dedsiarche_postgres-data` 和 `dedsiarche_redis-data`。首次切换会停止旧依赖容器，但保留原容器和数据卷。
 
 ## 安装模板（类似 dotnet new install）
 
 ```powershell
-.\scripts\install-template.ps1
+..\scripts\install-template.ps1
 ```
 
 将模板安装至本机 Maven 仓库，坐标 `com.dedsi:dedsi-arche:1.0.0`。
@@ -70,7 +74,7 @@ docker compose up -d --wait
 ## 创建项目（类似 dotnet new）
 
 ```powershell
-.\scripts\new-project.ps1 -Name my-shop -Package com.example.myshop -OutputDirectory C:\Githubs
+..\scripts\new-project.ps1 -Name my-shop -Package com.example.myshop -OutputDirectory C:\Githubs
 ```
 
 生成 my-shop-common、my-shop-system、my-shop-host。命令拒绝覆盖已有目录。

@@ -22,4 +22,5 @@ public interface UserRepository {
      * 保存用户聚合并返回持久化后的实体。
      */
     User save(User user);
+    void delete(User user);
 }

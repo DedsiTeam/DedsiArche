@@ -9,7 +9,16 @@ $ErrorActionPreference = 'Stop'
 if (!(Get-Command mvn.cmd -ErrorAction SilentlyContinue)) {
     throw '请先安装 Maven 并将 bin 目录加入 PATH，然后重新打开终端。'
 }
-$root = Split-Path $PSScriptRoot -Parent
+# 源仓库脚本位于 src/scripts；模板生成项目仍使用根目录下的 scripts。
+$parentDirectory = Split-Path $PSScriptRoot -Parent
+$root = if (Test-Path -LiteralPath (Join-Path $parentDirectory 'pom.xml')) {
+    $parentDirectory
+} else {
+    Join-Path $parentDirectory 'java'
+}
+if (!(Test-Path -LiteralPath (Join-Path $root 'pom.xml'))) {
+    throw '找不到后端 pom.xml，请确认脚本目录与后端目录的位置。'
+}
 $build = Join-Path $root 'target/archetype'
 # 仅重建本项目下固定的临时目录，避免旧文件或本地密钥进入模板。
 $expected = [IO.Path]::GetFullPath((Join-Path $root 'target/archetype'))
@@ -71,7 +80,6 @@ $fileSets = @'
   </fileSet>
   <fileSet filtered="true">
     <includes>
-      <include>compose.yaml</include>
     </includes>
   </fileSet>
 </fileSets>
@@ -80,9 +88,8 @@ foreach ($name in @('.gitignore')) {
     Write-File (Join-Path $resources $name) ([IO.File]::ReadAllText((Join-Path $root $name)))
 }
 Write-File (Join-Path $resources 'README.md') ([IO.File]::ReadAllText((Join-Path $root 'docs/GENERATED-README.md')))
-Write-File (Join-Path $resources 'compose.yaml') (Filter-Source (Join-Path $root 'compose.yaml'))
 foreach ($name in @('init-local.ps1', 'run-local.ps1', 'add-module.ps1', 'smoke-test.ps1')) {
-    Write-File (Join-Path $resources "scripts/$name") ([IO.File]::ReadAllText((Join-Path $root "scripts/$name")))
+    Write-File (Join-Path $resources "scripts/$name") ([IO.File]::ReadAllText((Join-Path $PSScriptRoot $name)))
 }
 $modules = ''
 foreach ($suffix in @('common', 'system', 'host')) {

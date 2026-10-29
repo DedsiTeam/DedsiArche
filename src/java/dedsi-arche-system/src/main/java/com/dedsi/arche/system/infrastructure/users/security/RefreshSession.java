@@ -41,6 +41,8 @@ class RefreshSession {
      */
     @Column(nullable = false)
     boolean revoked;
+    @Column(name = "credential_version", nullable = false)
+    long credentialVersion;
 
     /**
      * 供 JPA 实例化实体使用。
@@ -54,11 +56,13 @@ class RefreshSession {
     RefreshSession(
             UUID userId,
             String hash,
-            Instant expiry
+            Instant expiry,
+            long credentialVersion
     ) {
         id = UUID.randomUUID();
         this.userId = userId;
         tokenHash = hash;
         expiresAt = expiry;
+        this.credentialVersion = credentialVersion;
     }
 }

@@ -11,6 +11,7 @@ import java.util.*;
  */
 @Repository
 public class JpaUserRepository implements UserRepository {
+    public void delete(User user) { delegate.delete(user); }
 
     /**
      * 负责实际数据库操作的 Spring Data 仓储。

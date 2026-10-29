@@ -12,4 +12,5 @@ public interface UserQuery {
      * 按用户标识查询只读资料，不存在时返回空结果。
      */
     Optional<UserQueryItemDto> findById(UUID id);
+    UserPage search(String keyword, Boolean enabled, int page, int size);
 }

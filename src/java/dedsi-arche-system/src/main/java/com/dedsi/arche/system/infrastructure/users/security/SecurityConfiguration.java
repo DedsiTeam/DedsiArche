@@ -15,8 +15,12 @@ import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Base64;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -27,6 +31,27 @@ import javax.crypto.spec.SecretKeySpec;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfiguration {
+
+    /** 仅允许配置的前端来源；Bearer 认证不需要跨域 Cookie。 */
+    @Bean
+    UrlBasedCorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:}") String allowedOrigins
+    ) {
+        var origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(origin -> !origin.isEmpty()).toList();
+        if (origins.stream().anyMatch(origin -> origin.contains("*"))) {
+            throw new IllegalArgumentException("CORS 来源必须为明确的 origin，不允许通配符");
+        }
+        var configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
     /**
      * 解析 Base64 密钥并校验长度，构造 HS256 签名密钥。
@@ -57,6 +82,7 @@ public class SecurityConfiguration {
     @Bean
     JwtDecoder jwtDecoder(
             SecretKey key,
+            com.dedsi.arche.system.domain.users.UserRepository users,
             @Value("${app.jwt.issuer}")
             String issuer
     ) {
@@ -70,7 +96,18 @@ public class SecurityConfiguration {
                                         new OAuth2Error("invalid_token"));
         decoder.setJwtValidator(
                 new DelegatingOAuth2TokenValidator<>(
-                        JwtValidators.createDefaultWithIssuer(issuer), audience));
+                        JwtValidators.createDefaultWithIssuer(issuer), audience, jwt -> {
+                            try {
+                                Object claim = jwt.getClaims().get("credential_version");
+                                long credentialVersion = claim == null ? 0 : Long.parseLong(claim.toString());
+                                return users.findById(java.util.UUID.fromString(jwt.getSubject()))
+                                    .filter(u -> u.isEnabled() && u.getCredentialVersion() == credentialVersion).isPresent()
+                                    ? OAuth2TokenValidatorResult.success()
+                                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token"));
+                            } catch (IllegalArgumentException e) {
+                                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token"));
+                            }
+                        }));
         return decoder;
     }
 
@@ -88,10 +125,12 @@ public class SecurityConfiguration {
     @Bean
     SecurityFilterChain security(
             HttpSecurity http,
+            UrlBasedCorsConfigurationSource corsConfigurationSource,
             @Value("${app.docs.enabled:true}")
             boolean docsEnabled
     ) throws Exception {
         return http.csrf(c -> c.disable())
+                .cors(c -> c.configurationSource(corsConfigurationSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         a ->

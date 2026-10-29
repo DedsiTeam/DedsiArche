@@ -33,6 +33,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+    private final com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration;
 
     /**
      * 用户聚合的持久化访问契约。
@@ -66,12 +67,14 @@ public class UserController {
             UserRepository users,
             UserQuery query,
             PasswordEncoder passwords,
-            TokenService tokens
+            TokenService tokens,
+            com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration
     ) {
         this.users = users;
         this.query = query;
         this.passwords = passwords;
         this.tokens = tokens;
+        this.administration = administration;
         dummyHash = passwords.encode(UUID.randomUUID().toString());
     }
 
@@ -123,7 +126,7 @@ public class UserController {
             throw new LoginFailedException();
         }
         user.ensureEnabled();
-        return loginResponse(user, tokens.issue(user.getId()));
+        return loginResponse(user, tokens.issue(user.getId(), user.getCredentialVersion()));
     }
 
     /**
@@ -140,7 +143,7 @@ public class UserController {
         UUID id = tokens.consume(request.refreshToken());
         User user = users.findById(id).orElseThrow(() -> new BadCredentialsException("用户不存在"));
         user.ensureEnabled();
-        return loginResponse(user, tokens.issue(id));
+        return loginResponse(user, tokens.issue(id, user.getCredentialVersion()));
     }
 
     /**
@@ -174,7 +177,7 @@ public class UserController {
         var user =
                 query.findById(UUID.fromString(jwt.getSubject()))
                         .orElseThrow(() -> new BadCredentialsException("用户不存在"));
-        return new UserResponse(user.id(), user.username(), user.displayName());
+        return new UserResponse(user.id(), user.username(), user.displayName(), administration.isAdministrator(user.username()));
     }
 
     /**
@@ -206,7 +209,7 @@ public class UserController {
      * 将用户聚合转换为不含认证敏感信息的响应。
      */
     private UserResponse response(User user) {
-        return new UserResponse(user.getId(), user.getUsername(), user.getDisplayName());
+        return new UserResponse(user.getId(), user.getUsername(), user.getDisplayName(), administration.isAdministrator(user.getUsername()));
     }
 
     /**

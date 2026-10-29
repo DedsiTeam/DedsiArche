@@ -40,6 +40,11 @@ public class User {
      */
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
+    @Column(name = "credential_version", nullable = false)
+    private long credentialVersion;
+
+    public long getCredentialVersion() { return credentialVersion; }
+    public void resetPassword(String hash) { passwordHash = hash; credentialVersion++; }
 
     /**
      * 用户是否允许登录和修改资料。
@@ -108,6 +113,9 @@ public class User {
             throw new BusinessException("USER_DISABLED", "用户已停用");
         }
     }
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean value) { enabled = value; }
 
     /**
      * 返回用户唯一标识。

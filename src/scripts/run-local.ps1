@@ -6,9 +6,18 @@ $ErrorActionPreference = 'Stop'
 if (!(Get-Command mvn.cmd -ErrorAction SilentlyContinue)) {
     throw '请先安装 Maven 并将 bin 目录加入 PATH，然后重新打开终端。'
 }
-$root = Split-Path $PSScriptRoot -Parent
+# 源仓库脚本位于 src/scripts；模板生成项目仍使用根目录下的 scripts。
+$parentDirectory = Split-Path $PSScriptRoot -Parent
+$root = if (Test-Path -LiteralPath (Join-Path $parentDirectory 'pom.xml')) {
+    $parentDirectory
+} else {
+    Join-Path $parentDirectory 'java'
+}
+if (!(Test-Path -LiteralPath (Join-Path $root 'pom.xml'))) {
+    throw '找不到后端 pom.xml，请确认脚本目录与后端目录的位置。'
+}
 if (!(Test-Path (Join-Path $root '.env'))) {
-    throw '请先执行 scripts/init-local.ps1'
+    throw '请先执行同目录下的 init-local.ps1'
 }
 # 仅将环境文件中的变量加载到当前进程及其子进程。
 Get-Content (Join-Path $root '.env') | ForEach-Object {

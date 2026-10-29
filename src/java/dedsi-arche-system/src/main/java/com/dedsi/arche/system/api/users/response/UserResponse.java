@@ -17,6 +17,8 @@ public record UserResponse(
         @Schema(description = "登录名", example = "alice")
         String username,
         @Schema(description = "显示名称", example = "Alice")
-        String displayName
+        String displayName,
+        @Schema(description = "是否可以管理用户")
+        boolean canManageUsers
 ) {
 }

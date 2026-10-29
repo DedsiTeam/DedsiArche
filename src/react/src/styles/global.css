@@ -1,26 +1,55 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* UI tokens: primary blue, black, white. See README.md for the UI specification. */
+@theme inline {
+  --color-background: #fff;
+  --color-foreground: rgb(0 0 0 / 0.88);
+  --color-card: #fff;
+  --color-card-foreground: rgb(0 0 0 / 0.88);
+  --color-popover: #fff;
+  --color-popover-foreground: rgb(0 0 0 / 0.88);
+  --color-primary: #5996FF;
+  --color-primary-foreground: #fff;
+  --color-secondary: rgb(0 0 0 / 0.04);
+  --color-secondary-foreground: rgb(0 0 0 / 0.88);
+  --color-muted: rgb(0 0 0 / 0.025);
+  --color-muted-foreground: rgb(0 0 0 / 0.60);
+  --color-accent: rgb(0 0 0 / 0.06);
+  --color-accent-foreground: rgb(0 0 0 / 0.88);
+  --color-destructive: rgb(0 0 0 / 0.88);
+  --color-border: rgb(0 0 0 / 0.10);
+  --color-input: rgb(0 0 0 / 0.24);
+  --color-ring: #5996FF;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
 :root {
-  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
-  color: #172554;
-  background: #f5f7fb;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: var(--color-foreground);
+  background: var(--color-background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  --sidebar-width: 200px;
+  --page-padding: 2rem;
 }
-
-body { margin: 0; min-width: 320px; }
-.app-layout { min-height: 100vh; background: #f5f7fb; }
-.app-header { display: flex; align-items: center; gap: 48px; padding: 0 6%; background: white; border-bottom: 1px solid #e8ecf3; }
-.brand { color: #172554; font-size: 20px; font-weight: 700; white-space: nowrap; }
-.app-header .ant-menu { flex: 1; min-width: 0; border-bottom: none; }
-.app-content { width: 100%; max-width: 1200px; margin: 0 auto; padding: 64px 32px; }
-.welcome { padding: 40px; border: 1px solid #e3e9f6; border-radius: 16px; background: linear-gradient(120deg, #fff, #edf2ff); }
-.eyebrow { color: #3157d5; font-size: 12px; letter-spacing: 3px; font-weight: 600; }
-.foundation-card { height: 100%; }
-.app-footer { text-align: center; background: transparent; }
-
-@media (max-width: 600px) {
-  .app-header { gap: 20px; padding: 0 20px; }
-  .app-content { padding: 32px 20px; }
-  .welcome { padding: 24px; }
-  .welcome h1 { font-size: 28px; }
-}
+* { border-color: var(--color-border); box-sizing: border-box; }
+body { margin: 0; min-width: 1024px; overflow-y: hidden; }
+button:not(:disabled), a { cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 4px; }
+.desktop-sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); display: flex; flex-direction: column; overflow: hidden; }
+.desktop-workspace { margin-left: var(--sidebar-width); height: 100dvh; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.desktop-shell[data-collapsed="true"] { --sidebar-width: 72px; }
+.page-padding { padding: 1rem; }
+.login-page { height: 100dvh; overflow-y: auto; display: flex; background: var(--color-muted); padding: 2rem; }
+.login-panel { width: 100%; max-width: 480px; margin: auto; padding-block: 2rem; }
+.order-table th { height: 64px; font-size: 13px; font-weight: 500; color: rgb(0 0 0 / 0.72); background: var(--color-muted); }
+.order-table td { height: 72px; font-size: 14px; }
+.order-table tbody { background: #fff; }
+.order-tabs [data-slot="tabs-list"] { height: 64px; overflow-y: hidden; }
+.order-tabs [data-slot="tabs-trigger"] { height: 100%; }
+.order-tabs [data-slot="tabs-trigger"][data-state="active"] { color: var(--color-primary); box-shadow: none; }
+.order-tabs [data-slot="tabs-trigger"][data-state="active"]::after { opacity: 1; background: var(--color-primary); bottom: 0; left: 16px; right: auto; width: 36px; }

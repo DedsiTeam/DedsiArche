@@ -7,7 +7,7 @@ spring:
       - optional:file:.env[.properties]
   application:
     name: dedsi-arche
-  # 默认连接 compose.yaml 中的本地 PostgreSQL。
+  # 默认连接 Aspire 管理的本地 PostgreSQL。
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:54329/dedsi_arche}
     username: ${DB_USER:dedsi}
@@ -28,6 +28,10 @@ spring:
     locations: classpath:db/migration/system
 # 接口文档开关与 JWT 签发配置。
 app:
+  users:
+    admin-usernames: ${USER_ADMIN_USERNAMES:}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:11126,http://127.0.0.1:11126}
   docs:
     enabled: ${DOCS_ENABLED:true}
   jwt:

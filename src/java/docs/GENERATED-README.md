@@ -4,20 +4,20 @@ Java 26 / Spring Boot 4.1.2 / Spring Data JPA + Hibernate / PostgreSQL / Spring 
 
 ## 本地启动（PowerShell）
 
-以下命令均在包含父 `pom.xml`、`scripts` 和 `compose.yaml` 的后端根目录执行。在 DedsiArche 源仓库中，先从仓库根目录执行 `cd src/java`；使用模板生成的独立项目则直接进入生成项目根目录。
+以下命令针对模板生成的独立项目，在包含父 `pom.xml` 和 `scripts` 的项目根目录执行。在 DedsiArche 源仓库中，先执行 `cd src/java`，并将下文命令中的 `.\scripts\` 替换为 `..\scripts\`，因为源仓库的公共脚本位于 `src/scripts`。
 
 准备 JDK 26，令 JAVA_HOME 指向 JDK 目录。安装全局 Maven（当前验证版本 3.10.0），将其 bin 目录加入 PATH，使用 `mvn --version` 确认安装成功，启动 Docker Desktop。
 
 ```powershell
 .\scripts\init-local.ps1
-docker compose up -d --wait
+# 先准备 PostgreSQL、Redis，并在 .env 中设置连接地址和现有密码
 .\scripts\run-local.ps1
 ```
 
 打开另一个终端，进入同一后端根目录后执行 `.\scripts\smoke-test.ps1` 验证。脚本会新增一个随机测试用户。如果设置了 `SERVER_PORT`，使用 `-BaseUrl` 指定对应地址。
 健康检查：`http://localhost:11518/dedsi-arche-api/actuator/health`。
 构建测试：`mvn clean verify`，默认 H2 测试无需 Docker。
-停止依赖：`docker compose stop`。`docker compose down` 保留数据卷；不要随意添加 `-v`。
+源仓库使用 src/aspire/start.ps1 统一启动；模板生成的项目使用自行提供的 PostgreSQL、Redis，不再生成 Compose 文件。停止依赖时请保留其数据卷。
 
 ## 分层
 
@@ -64,7 +64,7 @@ Flyway 创建 sys_users 和认证内部表 sys_refresh_sessions，Hibernate 仅 
 表结构或数据库注释的后续变更应新增迁移版本。
 
 Redis 已配置连接、独立密码与 Actuator 健康检查；当前用户查询直接读取数据库，不缓存密码或认证决策。
-数据库与 Redis 仅映射至 127.0.0.1 的 54329、63799。不同项目并行运行时调整 compose 端口及 DB_URL/REDIS_PORT。
+默认连接本机 PostgreSQL 54329 和 Redis 63799；不同项目并行运行时分别配置 DB_URL、REDIS_HOST 和 REDIS_PORT。
 数据库时间使用 Instant / timestamptz，API 输出 ISO-8601 UTC。没有复用其他仓库的本地时间规则。
 刷新会话过期记录需要部署环境定期清理（仅删除已过期记录）；示例未启用后台清理任务。
 

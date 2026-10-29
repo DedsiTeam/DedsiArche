@@ -13,11 +13,9 @@ import jakarta.validation.constraints.*;
 public record LoginRequest(
         @Schema(description = "登录名", example = "alice")
         @NotBlank
-        @Size(max = 50)
         String username,
         @Schema(description = "登录密码", format = "password", accessMode = Schema.AccessMode.WRITE_ONLY)
         @NotBlank
-        @Size(max = 64)
         String password
 ) {
 }
