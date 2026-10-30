@@ -7,6 +7,6 @@ import org.springframework.security.authentication.BadCredentialsException;
  */
 public class LoginFailedException extends BadCredentialsException {
     public LoginFailedException() {
-        super("用户名或密码错误");
+        super("账号或密码错误");
     }
 }

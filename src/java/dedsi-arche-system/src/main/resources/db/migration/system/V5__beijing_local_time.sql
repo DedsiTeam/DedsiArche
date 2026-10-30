@@ -1,0 +1,9 @@
+-- 业务时间统一使用北京时间本地值；不保留旧 UTC 字段或兼容分支。
+SET LOCAL TIME ZONE 'Asia/Shanghai';
+ALTER TABLE sys_users
+    ALTER COLUMN created_at TYPE TIMESTAMP WITHOUT TIME ZONE;
+ALTER TABLE sys_permissions
+    ALTER COLUMN created_at TYPE TIMESTAMP WITHOUT TIME ZONE,
+    ALTER COLUMN updated_at TYPE TIMESTAMP WITHOUT TIME ZONE;
+ALTER TABLE sys_refresh_sessions
+    ALTER COLUMN expires_at TYPE TIMESTAMP WITHOUT TIME ZONE;

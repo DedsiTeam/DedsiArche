@@ -9,6 +9,8 @@ spring:
     name: dedsi-arche
   # 默认连接 Aspire 管理的本地 PostgreSQL。
   datasource:
+    hikari:
+      connection-init-sql: SET TIME ZONE 'Asia/Shanghai'
     url: ${DB_URL:jdbc:postgresql://localhost:25473/dedsi_arche}
     username: ${DB_USER:dedsi}
     password: ${DB_PASSWORD}
@@ -62,3 +64,8 @@ springdoc:
 scalar:
   enabled: ${app.docs.enabled}
   url: /v3/api-docs
+
+# 日志时间固定为北京时间。
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS,Asia/Shanghai

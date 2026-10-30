@@ -4,7 +4,8 @@ import com.dedsi.arche.common.exception.BusinessException;
 
 import jakarta.persistence.*;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -17,27 +18,40 @@ import java.util.UUID;
         uniqueConstraints = @UniqueConstraint(name = "uk_users_username", columnNames = "username"))
 public class User {
 
-    /**
-     * 记录的唯一标识。
-     */
+    /* 记录的唯一标识。 */
     @Id
     private UUID id;
 
-    /**
-     * 规范化为小写的登录用户名。
-     */
+    /* 规范化为小写的账号。 */
     @Column(nullable = false, length = 50)
     private String username;
 
-    /**
-     * 向调用方展示的用户名称。
-     */
+    /* 向调用方展示的账号称。 */
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
 
-    /**
-     * BCrypt 密码哈希，不存储明文密码。
-     */
+    @Column(length = 16)
+    private String phone;
+
+    @Column(length = 254)
+    private String email;
+
+    public String getPhone() { return phone; }
+    public String getEmail() { return email; }
+
+    /** 空串清除联系方式；格式约束在所有写入入口统一执行。 */
+    public void updateContact(String phone, String email) {
+        String nextPhone = phone == null || phone.isBlank() ? null : phone.trim();
+        String nextEmail = email == null || email.isBlank() ? null : email.trim();
+        if (nextPhone != null && !nextPhone.matches("[+]?[0-9]{7,15}"))
+            throw new BusinessException("INVALID_PHONE", "手机号需为 7～15 位数字，可使用 + 国际区号");
+        if (nextEmail != null && (nextEmail.length() > 254 || !nextEmail.matches("[^\\s@]+@[^\\s@]+[.][^\\s@]+")))
+            throw new BusinessException("INVALID_EMAIL", "请输入有效邮箱，最多 254 个字符");
+        this.phone = nextPhone;
+        this.email = nextEmail;
+    }
+
+    /* BCrypt 密码哈希，不存储明文密码。 */
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
     @Column(name = "credential_version", nullable = false)
@@ -46,21 +60,15 @@ public class User {
     public long getCredentialVersion() { return credentialVersion; }
     public void resetPassword(String hash) { passwordHash = hash; credentialVersion++; }
 
-    /**
-     * 用户是否允许登录和修改资料。
-     */
+    /* 用户是否允许登录和修改资料。 */
     @Column(nullable = false)
     private boolean enabled;
 
-    /**
-     * 用户注册时间。
-     */
+    /* 用户注册时间。 */
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
-    /**
-     * 用于检测并发更新的乐观锁版本。
-     */
+    /* 用于检测并发更新的乐观锁版本。 */
     @Version
     private Long version;
 
@@ -71,7 +79,7 @@ public class User {
     }
 
     /**
-     * 创建已启用的用户聚合，规范化用户名并记录注册时间。
+     * 创建已启用的用户聚合，规范化账号并记录注册时间。
      */
     public static User register(
             String username,
@@ -84,23 +92,23 @@ public class User {
         user.rename(displayName);
         user.passwordHash = passwordHash;
         user.enabled = true;
-        user.createdAt = Instant.now();
+        user.createdAt = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
         return user;
     }
 
     /**
-     * 去除用户名首尾空白，并使用固定语言规则转换为小写。
+     * 去除账号首尾空白，并使用固定语言规则转换为小写。
      */
     public static String normalizeUsername(String value) {
         return value.trim().toLowerCase(Locale.ROOT);
     }
 
     /**
-     * 校验显示名称并去除首尾空白后更新资料。
+     * 校验姓名并去除首尾空白后更新资料。
      */
     public void rename(String name) {
         if (name == null || name.isBlank() || name.trim().length() > 100) {
-            throw new BusinessException("INVALID_DISPLAY_NAME", "显示名称不能为空且最多 100 个字符");
+            throw new BusinessException("INVALID_DISPLAY_NAME", "姓名不能为空且最多 100 个字符");
         }
         displayName = name.trim();
     }
@@ -125,14 +133,14 @@ public class User {
     }
 
     /**
-     * 返回规范化后的登录用户名。
+     * 返回规范化后的账号。
      */
     public String getUsername() {
         return username;
     }
 
     /**
-     * 返回用户显示名称。
+     * 返回用户姓名。
      */
     public String getDisplayName() {
         return displayName;
@@ -148,7 +156,7 @@ public class User {
     /**
      * 返回用户注册时间。
      */
-    public Instant getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 

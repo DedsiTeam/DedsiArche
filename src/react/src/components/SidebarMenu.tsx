@@ -20,8 +20,8 @@ function isActive(item: SidebarMenuItem, pathname: string): boolean {
     : pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))
 }
 
-const rowClass = 'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-black/5'
-const activeClass = 'bg-primary text-white hover:bg-primary/90'
+const rowClass = 'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'
+const activeClass = 'bg-[var(--sidebar-active)] font-semibold text-white hover:bg-[var(--sidebar-active)] hover:text-white'
 
 function FlyoutItems({ items, pathname }: { items: SidebarMenuItem[]; pathname: string }) {
   return items.map((item) => {
@@ -71,11 +71,11 @@ function MenuNode({ item, pathname, collapsed }: { item: SidebarMenuItem; pathna
 
   return <li>
     <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={childrenId}
-      className={cn(rowClass, active && 'text-primary')}>
+      className={cn(rowClass, active && 'font-medium text-foreground')}>
       <Icon className="size-4 shrink-0" /><span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
       <ChevronDown className={cn('size-3.5 shrink-0 transition-transform', !open && '-rotate-90')} />
     </button>
-    <ul id={childrenId} hidden={!open} className="ml-4 space-y-1 pt-1">
+    <ul id={childrenId} hidden={!open} className="ml-4 space-y-1 border-l pl-2 pt-1">
       {item.children.map((child) => <MenuNode key={child.id} item={child} pathname={pathname} collapsed={false} />)}
     </ul>
   </li>
@@ -83,7 +83,7 @@ function MenuNode({ item, pathname, collapsed }: { item: SidebarMenuItem; pathna
 
 export function SidebarMenu({ items, collapsed }: { items: SidebarMenuItem[]; collapsed: boolean }) {
   const { pathname } = useLocation()
-  return <nav id="main-navigation" aria-label="主导航" className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+  return <nav id="main-navigation" aria-label="主导航" className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
     <ul className="space-y-1">
       {items.map((item) => <MenuNode key={`${item.id}:${pathname}`} item={item} pathname={pathname} collapsed={collapsed} />)}
     </ul>

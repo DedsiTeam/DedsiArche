@@ -1,0 +1,4 @@
+interface:
+  display_name: "DedsiArche 前端开发"
+  short_description: "以 User 前端为基准实现管理页面、表单、接口与导航，保留项目交互细节"
+  default_prompt: "使用 $dedsi-frontend，按照当前 User 前端实现目标领域页面，核对细节并报告现有差异。"

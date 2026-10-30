@@ -23,9 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class OpenApiDisabledTests {
 
-    /**
-     * 通过 Spring MVC 测试入口发送请求并断言响应。
-     */
+    /* 通过 Spring MVC 测试入口发送请求并断言响应。 */
     @Autowired
     MockMvc mvc;
 

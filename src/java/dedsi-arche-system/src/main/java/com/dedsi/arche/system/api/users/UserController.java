@@ -4,7 +4,7 @@ import com.dedsi.arche.common.exception.BusinessException;
 import com.dedsi.arche.system.api.users.request.*;
 import com.dedsi.arche.system.api.users.response.*;
 import com.dedsi.arche.system.domain.users.*;
-import com.dedsi.arche.system.domain.users.query.UserQuery;
+import com.dedsi.arche.system.domain.users.query.IUserQuery;
 import com.dedsi.arche.system.infrastructure.users.security.TokenService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,37 +35,27 @@ import java.util.UUID;
 public class UserController {
     private final com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration;
 
-    /**
-     * 用户聚合的持久化访问契约。
-     */
-    private final UserRepository users;
+    /* 用户聚合的持久化访问契约。 */
+    private final IUserRepository users;
 
-    /**
-     * 只读用户资料查询契约。
-     */
-    private final UserQuery query;
+    /* 只读用户资料查询契约。 */
+    private final IUserQuery query;
 
-    /**
-     * 密码加密和校验组件。
-     */
+    /* 密码加密和校验组件。 */
     private final PasswordEncoder passwords;
 
-    /**
-     * 访问令牌签发与刷新会话管理组件。
-     */
+    /* 访问令牌签发与刷新会话管理组件。 */
     private final TokenService tokens;
 
-    /**
-     * 账号不存在时仍执行密码校验的占位哈希，降低账号探测风险。
-     */
+    /* 账号不存在时仍执行密码校验的占位哈希，降低账号探测风险。 */
     private final String dummyHash;
 
     /**
      * 注入用户仓储、查询与认证服务，并预生成防止账号探测的占位密码哈希。
      */
     public UserController(
-            UserRepository users,
-            UserQuery query,
+            IUserRepository users,
+            IUserQuery query,
             PasswordEncoder passwords,
             TokenService tokens,
             com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration
@@ -79,9 +69,9 @@ public class UserController {
     }
 
     /**
-     * 校验注册信息和用户名唯一性，加密密码后保存用户。
+     * 校验注册信息和账号唯一性，加密密码后保存用户。
      */
-    @Operation(summary = "注册用户", description = "用户名为 3～50 位英文字母、数字或下划线；密码至少 12 字符，UTF-8 最多 72 字节。")
+    @Operation(summary = "注册用户", description = "账号为 3～50 位英文字母、数字或下划线；密码至少 12 字符，UTF-8 最多 72 字节。")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
@@ -94,7 +84,7 @@ public class UserController {
             throw new BusinessException("PASSWORD_TOO_LONG", "密码 UTF-8 编码最多 72 字节");
         }
         if (users.findByUsername(User.normalizeUsername(request.username())).isPresent()) {
-            throw new BusinessException("USERNAME_EXISTS", "用户名已存在");
+            throw new BusinessException("USERNAME_EXISTS", "账号已存在");
         }
         User user =
                 users.save(
@@ -102,6 +92,7 @@ public class UserController {
                                 request.username(),
                                 request.displayName(),
                                 passwords.encode(request.password())));
+        user.updateContact(request.phone(), request.email());
         return response(user);
     }
 
@@ -181,9 +172,9 @@ public class UserController {
     }
 
     /**
-     * 修改当前用户显示名称，由事务提交时的脏检查保存变更。
+     * 修改当前用户姓名，由事务提交时的脏检查保存变更。
      */
-    @Operation(summary = "修改当前用户显示名称", description = "事务内修改受管理实体，由 Hibernate 脏检查自动持久化。")
+    @Operation(summary = "修改当前用户姓名", description = "事务内修改受管理实体，由 Hibernate 脏检查自动持久化。")
     @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/me")
     @PreAuthorize("hasAuthority('SCOPE_profile')")
@@ -226,6 +217,7 @@ public class UserController {
                                 issued.accessToken(),
                                 "Bearer",
                                 issued.expiresAt(),
+                                issued.expiresAtEpochMs(),
                                 issued.refreshToken(),
                                 response(user)));
     }

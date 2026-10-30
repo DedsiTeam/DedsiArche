@@ -1,7 +1,7 @@
 import { notify } from '@/lib/notify'
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle, Monitor } from 'lucide-react'
 import { SidebarMenu, type SidebarMenuItem } from '@/components/SidebarMenu'
 import { Button } from '@/components/ui/button'
 
@@ -16,11 +16,13 @@ function Navigation({ collapsed }: { collapsed: boolean }) {
   const items: SidebarMenuItem[] = session?.user.canManageUsers
     ? [{ id: 'system', label: '系统管理', icon: Settings2, children: [
       { id: 'users', label: '用户管理', icon: Users, to: '/users' },
+      { id: 'managed-systems', label: '系统管理', icon: Monitor, to: '/systems' },
+      { id: 'permissions', label: '权限管理', icon: Settings2, to: '/permissions' },
     ] }]
     : []
   return <>
-    <div className="flex h-16 shrink-0 items-center justify-center px-3">
-      <Link to="/" aria-label="DedsiArche 首页" className="flex items-center justify-center gap-3 text-xl font-bold tracking-tight"><Layers2 className="size-8 shrink-0" />{!collapsed && <span>DedsiArche</span>}</Link>
+    <div className="flex h-18 shrink-0 items-center justify-center border-b px-4">
+      <Link to="/" aria-label="DedsiArche 首页" className="flex items-center justify-center gap-3 text-xl font-bold tracking-tight"><Layers2 className="size-8 shrink-0 text-primary" />{!collapsed && <span>DedsiArche</span>}</Link>
     </div>
     <SidebarMenu items={items} collapsed={collapsed} />
   </>
@@ -42,13 +44,13 @@ export function AppLayout() {
   }
 
   return <div className="desktop-shell min-h-screen bg-background" data-collapsed={collapsed}>
-    <aside className="desktop-sidebar border-r bg-black/[0.025]">
+    <aside className="desktop-sidebar border-r bg-muted">
       <Navigation collapsed={collapsed} />
-      <div className={cn('flex shrink-0 items-center gap-1 border-t p-3', collapsed && 'flex-col')}>
+      <div className={cn('flex shrink-0 items-center gap-1 border-t bg-card px-3 py-2', collapsed && 'flex-col')}>
         {!collapsed && <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className={cn('h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-3 text-left', collapsed && 'w-full flex-none justify-center px-0')} title={displayName} aria-label={`当前用户：${displayName}`}>
-              <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary font-semibold text-primary">{session ? displayName.slice(0, 2).toUpperCase() : 'DA'}</AvatarFallback></Avatar>
+            <Button variant="ghost" className={cn('h-10 min-w-0 flex-1 justify-start gap-2 px-2 py-1 text-left', collapsed && 'w-full flex-none justify-center px-0')} title={displayName} aria-label={`当前用户：${displayName}`}>
+              <Avatar className="size-8 shrink-0"><AvatarFallback className="bg-secondary font-semibold text-primary">{session ? displayName.slice(0, 2).toUpperCase() : 'DA'}</AvatarFallback></Avatar>
               {!collapsed && <span className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</span>}
             </Button>
           </DropdownMenuTrigger>

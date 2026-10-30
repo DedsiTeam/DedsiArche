@@ -1,0 +1,2 @@
+ALTER TABLE sys_users ADD COLUMN phone VARCHAR(16);
+ALTER TABLE sys_users ADD COLUMN email VARCHAR(254);

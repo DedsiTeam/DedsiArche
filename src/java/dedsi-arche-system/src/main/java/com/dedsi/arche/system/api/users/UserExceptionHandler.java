@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserExceptionHandler {
 
     /**
-     * 将业务错误转换为参数错误或用户名冲突响应，并保留错误码。
+     * 将业务错误转换为参数错误或账号冲突响应，并保留错误码。
      */
     @ExceptionHandler(BusinessException.class)
     ProblemDetail business(BusinessException e) {
@@ -34,7 +34,7 @@ public class UserExceptionHandler {
      */
     @ExceptionHandler(LoginFailedException.class)
     ProblemDetail login(LoginFailedException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "账号或密码错误");
     }
 
     /**
@@ -58,7 +58,7 @@ public class UserExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail conflict(DataIntegrityViolationException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "数据冲突，请检查用户名等唯一字段");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "数据冲突，请检查账号等唯一字段");
     }
 
     /**

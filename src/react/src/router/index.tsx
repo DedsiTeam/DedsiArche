@@ -4,6 +4,8 @@ import { HomePage } from '../pages/HomePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { LoginPage } from '../pages/LoginPage'
 import { UsersPage } from '../pages/UsersPage'
+import { ManagedSystemsPage } from '../pages/ManagedSystemsPage'
+import { PermissionsPage } from '../pages/PermissionsPage'
 import { RequireAuth } from './RequireAuth'
 
 export const router = createBrowserRouter([
@@ -17,6 +19,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'users', element: <UsersPage /> },
+          { path: 'systems', element: <ManagedSystemsPage /> },
+          { path: 'permissions', element: <PermissionsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.dedsi.arche.system.domain.users.UserRepository;
+import com.dedsi.arche.system.domain.users.IUserRepository;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,23 +24,17 @@ import tools.jackson.databind.ObjectMapper;
 @ActiveProfiles("test")
 class UserApiTests {
 
-    /**
-     * 通过 Spring MVC 测试入口发送请求并断言响应。
-     */
+    /* 通过 Spring MVC 测试入口发送请求并断言响应。 */
     @Autowired
     MockMvc mvc;
 
-    /**
-     * 测试请求与响应使用的 JSON 序列化器。
-     */
+    /* 测试请求与响应使用的 JSON 序列化器。 */
     @Autowired
     ObjectMapper json;
 
-    /**
-     * 用户聚合的持久化访问契约。
-     */
+    /* 用户聚合的持久化访问契约。 */
     @Autowired
-    UserRepository users;
+    IUserRepository users;
 
     /**
      * 验证注册、登录、JWT 验签、资料持久化及刷新令牌轮换和撤销。
@@ -73,13 +67,13 @@ class UserApiTests {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"username\":\"alice\",\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.detail").value("用户名或密码错误"));
+                .andExpect(jsonPath("$.detail").value("账号或密码错误"));
         mvc.perform(
                         post("/api/users/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"username\":\"unknown_user\",\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.detail").value("用户名或密码错误"));
+                .andExpect(jsonPath("$.detail").value("账号或密码错误"));
         var login =
                 mvc.perform(
                                 post("/api/users/login")

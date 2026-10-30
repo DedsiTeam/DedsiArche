@@ -13,6 +13,8 @@ public class DedsiArcheApplication {
      * 启动应用并加载业务模块与基础设施配置。
      */
     public static void main(String[] args) {
+        // 所有启动入口统一北京时间，不依赖操作系统默认时区。
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Shanghai"));
         SpringApplication.run(DedsiArcheApplication.class, args);
     }
 }

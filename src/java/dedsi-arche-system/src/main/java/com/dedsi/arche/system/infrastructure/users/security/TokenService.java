@@ -17,26 +17,18 @@ import java.util.*;
  */
 @Component
 public class TokenService {
-    private final com.dedsi.arche.system.domain.users.UserRepository users;
+    private final com.dedsi.arche.system.domain.users.IUserRepository users;
 
-    /**
-     * 使用配置密钥签发 JWT 的编码器。
-     */
+    /* 使用配置密钥签发 JWT 的编码器。 */
     private final JwtEncoder encoder;
 
-    /**
-     * 刷新会话仓储，支持加锁查询与持久化。
-     */
-    private final RefreshSessionRepository sessions;
+    /* 刷新会话仓储，支持加锁查询与持久化。 */
+    private final IRefreshSessionRepository sessions;
 
-    /**
-     * 写入 JWT 并在验签时核对的签发者。
-     */
+    /* 写入 JWT 并在验签时核对的签发者。 */
     private final String issuer;
 
-    /**
-     * 生成不可预测刷新令牌的密码学安全随机数源。
-     */
+    /* 生成不可预测刷新令牌的密码学安全随机数源。 */
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /**
@@ -44,8 +36,8 @@ public class TokenService {
      */
     public TokenService(
             JwtEncoder encoder,
-            RefreshSessionRepository sessions,
-            com.dedsi.arche.system.domain.users.UserRepository users,
+            IRefreshSessionRepository sessions,
+            com.dedsi.arche.system.domain.users.IUserRepository users,
             @Value("${app.jwt.issuer}")
             String issuer
     ) {
@@ -59,12 +51,14 @@ public class TokenService {
      * 一次签发的访问令牌、过期时间和刷新令牌。
      *
      * @param accessToken 通过 Bearer 请求头传递的访问令牌。
-     * @param expiresAt 令牌过期时间。
+     * @param expiresAt 令牌过期北京时间。
+     * @param expiresAtEpochMs 认证过期计时用毫秒时间戳。
      * @param refreshToken 用于刷新或撤销会话的凭据，每次刷新后必须替换。
      */
     public record Tokens(
             String accessToken,
-            Instant expiresAt,
+            LocalDateTime expiresAt,
+            long expiresAtEpochMs,
             String refreshToken
     ) {
     }
@@ -74,14 +68,17 @@ public class TokenService {
      */
     @Transactional
     public Tokens issue(UUID userId, long credentialVersion) {
-        Instant now = Instant.now();
-        Instant expiry = now.plusSeconds(900);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        LocalDateTime expiry = now.plusSeconds(900);
+        // JWT 标准要求 NumericDate；协议时间戳仅在认证边界生成。
+        Instant issuedInstant = now.toInstant(ZoneOffset.ofHours(8));
+        Instant expiryInstant = expiry.toInstant(ZoneOffset.ofHours(8));
         JwtClaimsSet claims =
                 JwtClaimsSet.builder()
                         .issuer(issuer)
                         .subject(userId.toString())
-                        .issuedAt(now)
-                        .expiresAt(expiry)
+                        .issuedAt(issuedInstant)
+                        .expiresAt(expiryInstant)
                         .id(UUID.randomUUID().toString())
                         .audience(List.of("dedsi-api"))
                         .claim("scope", "profile")
@@ -96,7 +93,7 @@ public class TokenService {
         RANDOM.nextBytes(bytes);
         String refresh = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         sessions.save(new RefreshSession(userId, hash(refresh), now.plus(Duration.ofDays(7)), credentialVersion));
-        return new Tokens(access, expiry, refresh);
+        return new Tokens(access, expiry, expiryInstant.toEpochMilli(), refresh);
     }
 
     /**
@@ -107,7 +104,7 @@ public class TokenService {
         RefreshSession session =
                 sessions.lockByHash(hash(refresh))
                         .orElseThrow(() -> new BadCredentialsException("刷新令牌无效"));
-        if (session.revoked || !session.expiresAt.isAfter(Instant.now())) {
+        if (session.revoked || !session.expiresAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Shanghai")))) {
             throw new BadCredentialsException("刷新令牌无效或已过期");
         }
         session.revoked = true;

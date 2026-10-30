@@ -2,7 +2,7 @@ package com.dedsi.arche.system.infrastructure.users.security;
 
 import jakarta.persistence.*;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -12,33 +12,23 @@ import java.util.UUID;
 @Table(name = "sys_refresh_sessions")
 class RefreshSession {
 
-    /**
-     * 记录的唯一标识。
-     */
+    /* 记录的唯一标识。 */
     @Id
     UUID id;
 
-    /**
-     * 刷新会话所属用户的唯一标识。
-     */
+    /* 刷新会话所属用户的唯一标识。 */
     @Column(name = "user_id", nullable = false)
     UUID userId;
 
-    /**
-     * 刷新令牌的 SHA-256 摘要，用于检索会话。
-     */
+    /* 刷新令牌的 SHA-256 摘要，用于检索会话。 */
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
     String tokenHash;
 
-    /**
-     * 令牌过期时间。
-     */
+    /* 令牌过期时间。 */
     @Column(name = "expires_at", nullable = false)
-    Instant expiresAt;
+    LocalDateTime expiresAt;
 
-    /**
-     * 会话是否已因刷新或退出而撤销。
-     */
+    /* 会话是否已因刷新或退出而撤销。 */
     @Column(nullable = false)
     boolean revoked;
     @Column(name = "credential_version", nullable = false)
@@ -56,7 +46,7 @@ class RefreshSession {
     RefreshSession(
             UUID userId,
             String hash,
-            Instant expiry,
+            LocalDateTime expiry,
             long credentialVersion
     ) {
         id = UUID.randomUUID();

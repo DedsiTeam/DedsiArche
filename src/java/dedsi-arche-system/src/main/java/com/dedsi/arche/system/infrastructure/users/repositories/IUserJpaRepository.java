@@ -10,10 +10,10 @@ import java.util.UUID;
 /**
  * Spring Data 自动实现基础 CRUD。
  */
-public interface UserJpaRepository extends JpaRepository<User, UUID> {
+public interface IUserJpaRepository extends JpaRepository<User, UUID> {
 
     /**
-     * 按规范化后的用户名查找用户，不存在时返回空结果。
+     * 按规范化后的账号查找用户，不存在时返回空结果。
      */
     Optional<User> findByUsername(String username);
 }

@@ -65,7 +65,7 @@ Flyway 创建 sys_users 和认证内部表 sys_refresh_sessions，Hibernate 仅 
 
 Redis 已配置连接、独立密码与 Actuator 健康检查；当前用户查询直接读取数据库，不缓存密码或认证决策。
 默认连接本机 PostgreSQL 25473 和 Redis 28641；不同项目并行运行时分别配置 DB_URL、REDIS_HOST 和 REDIS_PORT。
-数据库时间使用 Instant / timestamptz，API 输出 ISO-8601 UTC。没有复用其他仓库的本地时间规则。
+业务时间统一北京时间：Java 使用 LocalDateTime，数据库使用 timestamp without time zone，API 输出不带时区的 ISO 本地时间，前端直接展示。JWT 内部保持协议时间戳。
 刷新会话过期记录需要部署环境定期清理（仅删除已过期记录）；示例未启用后台清理任务。
 
 ## 新增业务模块

@@ -7,10 +7,10 @@ import jakarta.validation.constraints.*;
 /**
  * 当前用户资料修改请求。
  *
- * @param displayName 向调用方展示的用户名称。
+ * @param displayName 向调用方展示的账号称。
  */
 public record UpdateProfileRequest(
-        @Schema(description = "新的显示名称", example = "Alice Chen")
+        @Schema(description = "新的姓名", example = "Alice Chen")
         @NotBlank
         @Size(max = 100)
         String displayName

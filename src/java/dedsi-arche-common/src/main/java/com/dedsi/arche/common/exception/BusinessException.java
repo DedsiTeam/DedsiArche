@@ -5,9 +5,7 @@ package com.dedsi.arche.common.exception;
  */
 public class BusinessException extends RuntimeException {
 
-    /**
-     * 供调用方识别业务错误的稳定错误码。
-     */
+    /* 供调用方识别业务错误的稳定错误码。 */
     private final String code;
 
     /**

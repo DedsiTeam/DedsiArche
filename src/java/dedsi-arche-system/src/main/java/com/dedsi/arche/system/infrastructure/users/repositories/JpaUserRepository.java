@@ -10,18 +10,16 @@ import java.util.*;
  * 基础设施将业务仓储契约适配至 Spring Data。
  */
 @Repository
-public class JpaUserRepository implements UserRepository {
+public class JpaUserRepository implements IUserRepository {
     public void delete(User user) { delegate.delete(user); }
 
-    /**
-     * 负责实际数据库操作的 Spring Data 仓储。
-     */
-    private final UserJpaRepository delegate;
+    /* 负责实际数据库操作的 Spring Data 仓储。 */
+    private final IUserJpaRepository delegate;
 
     /**
      * 注入 Spring Data 仓储以适配领域仓储契约。
      */
-    public JpaUserRepository(UserJpaRepository delegate) {
+    public JpaUserRepository(IUserJpaRepository delegate) {
         this.delegate = delegate;
     }
 
@@ -33,7 +31,7 @@ public class JpaUserRepository implements UserRepository {
     }
 
     /**
-     * 按规范化后的用户名查找用户，不存在时返回空结果。
+     * 按规范化后的账号查找用户，不存在时返回空结果。
      */
     public Optional<User> findByUsername(String username) {
         return delegate.findByUsername(username);

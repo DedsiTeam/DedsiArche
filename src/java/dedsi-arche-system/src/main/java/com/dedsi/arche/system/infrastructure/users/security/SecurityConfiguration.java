@@ -82,7 +82,7 @@ public class SecurityConfiguration {
     @Bean
     JwtDecoder jwtDecoder(
             SecretKey key,
-            com.dedsi.arche.system.domain.users.UserRepository users,
+            com.dedsi.arche.system.domain.users.IUserRepository users,
             @Value("${app.jwt.issuer}")
             String issuer
     ) {

@@ -11,6 +11,16 @@
   <artifactId>dedsi-arche-system</artifactId>
   <dependencies>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.f4b6a3</groupId>
+      <artifactId>ulid-creator</artifactId>
+      <version>5.2.4</version>
+    </dependency>
+    <dependency>
       <groupId>com.dedsi.arche</groupId>
       <artifactId>dedsi-arche-common</artifactId>
     </dependency>

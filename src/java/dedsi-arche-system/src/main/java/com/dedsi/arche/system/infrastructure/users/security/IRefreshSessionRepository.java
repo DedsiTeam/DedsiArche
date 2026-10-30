@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * 刷新会话持久化契约，通过行锁保证令牌消费的并发安全。
  */
-interface RefreshSessionRepository extends JpaRepository<RefreshSession, UUID> {
+interface IRefreshSessionRepository extends JpaRepository<RefreshSession, UUID> {
     @Modifying
     @Query("delete from RefreshSession s where s.userId=:userId")
     void deleteAllByUserId(@Param("userId") UUID userId);

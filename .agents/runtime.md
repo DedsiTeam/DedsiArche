@@ -2,6 +2,7 @@
 
 ## 两种独立入口
 
+- Java 主入口固定默认时区 Asia/Shanghai，业务代码显式获取北京时间；数据库应用连接初始化为 Asia/Shanghai，应用日志也使用北京时间。两种启动方式都遵循相同规则，不依赖机器默认时区。
 ### Aspire 统一启动
 
 - 仓库根目录运行 .\src\aspire\start.ps1，统一启动 PostgreSQL、Redis、Java 和 React（Bun）。

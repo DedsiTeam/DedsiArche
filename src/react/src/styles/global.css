@@ -1,30 +1,31 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* UI tokens: primary blue, black, white. See README.md for the UI specification. */
-@theme inline {
-  --color-background: #fff;
-  --color-foreground: rgb(0 0 0 / 0.88);
+/* Administration UI: blue actions, slate text, quiet layered surfaces. */
+@theme {
+  --color-background: #F3F4F6;
+  --color-foreground: #1E293B;
   --color-card: #fff;
-  --color-card-foreground: rgb(0 0 0 / 0.88);
+  --color-card-foreground: #1E293B;
   --color-popover: #fff;
-  --color-popover-foreground: rgb(0 0 0 / 0.88);
-  --color-primary: #5996FF;
+  --color-popover-foreground: #1E293B;
+  --color-primary: #2563EB;
   --color-primary-foreground: #fff;
-  --color-secondary: rgb(0 0 0 / 0.04);
-  --color-secondary-foreground: rgb(0 0 0 / 0.88);
-  --color-muted: rgb(0 0 0 / 0.025);
-  --color-muted-foreground: rgb(0 0 0 / 0.60);
-  --color-accent: rgb(0 0 0 / 0.06);
-  --color-accent-foreground: rgb(0 0 0 / 0.88);
-  --color-destructive: rgb(0 0 0 / 0.88);
-  --color-border: rgb(0 0 0 / 0.10);
-  --color-input: rgb(0 0 0 / 0.24);
-  --color-ring: #5996FF;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --color-secondary: #EDF2F8;
+  --color-secondary-foreground: #1E293B;
+  --color-muted: #F8FAFC;
+  --color-muted-foreground: #64748B;
+  --color-accent: #E8EEF6;
+  --color-accent-foreground: #1E293B;
+  --color-destructive: #1E293B;
+  --color-error: #B91C1C;
+  --color-border: #E2E8F0;
+  --color-input: #CBD5E1;
+  --color-ring: #2563EB;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
 }
 :root {
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
@@ -33,19 +34,72 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --sidebar-width: 200px;
-  --page-padding: 2rem;
+  --sidebar-width: 232px;
+  --page-padding: 1.25rem;
 }
 * { border-color: var(--color-border); box-sizing: border-box; }
 body { margin: 0; min-width: 1024px; overflow-y: hidden; }
 button:not(:disabled), a { cursor: pointer; }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 4px; }
+.desktop-sidebar {
+  --color-muted: #142238;
+  --color-card: #142238;
+  --color-foreground: #F1F5F9;
+  --color-muted-foreground: #B0BED0;
+  --color-primary: #A8C7FF;
+  --color-ring: #A8C7FF;
+  --color-secondary: #263B57;
+  --color-accent: #22344D;
+  --color-accent-foreground: #FFFFFF;
+  --color-border: #2A3A50;
+  --sidebar-active: #2563EB;
+  color: var(--color-foreground);
+}
 .desktop-sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); display: flex; flex-direction: column; overflow: hidden; }
 .desktop-workspace { margin-left: var(--sidebar-width); height: 100dvh; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
 .desktop-shell[data-collapsed="true"] { --sidebar-width: 72px; }
-.page-padding { padding: 1rem; }
-.login-page { height: 100dvh; overflow-y: auto; display: flex; background: var(--color-muted); padding: 2rem; }
-.login-panel { width: 100%; max-width: 480px; margin: auto; padding-block: 2rem; }
+.page-padding { padding: var(--page-padding) 24px; width: 100%; }
+@media (max-width: 1279px) { :root { --sidebar-width: 208px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+/* Login shares the administration palette without changing the workspace. */
+.login-page {
+  --login-brand-background: #142238;
+  --login-brand-foreground: #F1F5F9;
+  --login-brand-muted: #B0BED0;
+  --login-brand-accent: #A8C7FF;
+  height: 100dvh; overflow-y: auto; display: flex;
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(ellipse at 12% 18%, color-mix(in srgb, var(--login-brand-accent) 32%, transparent), transparent 48%),
+    radial-gradient(ellipse at 90% 85%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 48%),
+    linear-gradient(color-mix(in srgb, var(--color-muted-foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-muted-foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+  padding: 40px;
+}
+.login-shell {
+  width: 100%; max-width: 1120px; min-height: 580px; margin: auto;
+  display: grid; grid-template-columns: 42% 58%;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 20px 60px rgb(20 34 56 / 7%);
+}
+.login-brand {
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 44px; background: var(--login-brand-background); color: var(--login-brand-foreground);
+}
+.login-brand-art { display: flex; justify-content: center; padding: 24px 0; color: var(--login-brand-accent); }
+.login-brand-art svg { width: 180px; height: 180px; }
+.login-panel { width: 100%; max-width: 540px; margin: auto; padding: 56px 60px; }
+.login-compact-brand { display: none; }
+@media (max-width: 1100px) {
+  .login-shell { max-width: 520px; min-height: 0; grid-template-columns: 1fr; }
+  .login-brand { display: none; }
+  .login-panel { padding: 40px 48px; }
+  .login-compact-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; font-size: 18px; font-weight: 600; color: var(--color-muted-foreground); }
+}
 .order-table th { height: 64px; font-size: 13px; font-weight: 500; color: rgb(0 0 0 / 0.72); background: var(--color-muted); }
 .order-table td { height: 72px; font-size: 14px; }
 .order-table tbody { background: #fff; }

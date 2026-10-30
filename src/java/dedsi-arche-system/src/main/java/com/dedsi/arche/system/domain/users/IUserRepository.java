@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * 用户聚合仓储契约。
  */
-public interface UserRepository {
+public interface IUserRepository {
 
     /**
      * 按用户标识加载聚合，不存在时返回空结果。
@@ -14,7 +14,7 @@ public interface UserRepository {
     Optional<User> findById(UUID id);
 
     /**
-     * 按规范化后的用户名查找用户，不存在时返回空结果。
+     * 按规范化后的账号查找用户，不存在时返回空结果。
      */
     Optional<User> findByUsername(String username);
 

@@ -1,6 +1,6 @@
 package com.dedsi.arche.system.infrastructure.users.security;
 
-import com.dedsi.arche.system.domain.users.UserRepository;
+import com.dedsi.arche.system.domain.users.IUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -11,8 +11,8 @@ import java.util.*;
 @Component("userAdministration")
 public class UserAdministration {
     private final Set<String> usernames;
-    private final UserRepository users;
-    public UserAdministration(UserRepository users, @Value("${app.users.admin-usernames:}") String configured) {
+    private final IUserRepository users;
+    public UserAdministration(IUserRepository users, @Value("${app.users.admin-usernames:}") String configured) {
         this.users = users;
         usernames = new HashSet<>();
         Arrays.stream(configured.split(",")).map(String::trim).filter(s -> !s.isEmpty())

@@ -1,18 +1,19 @@
 import { notify } from '@/lib/notify'
 import { useEffect, useState, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { PasswordGeneratorInput } from '@/components/ui/password-generator-input'
 import { Button } from '@/components/ui/button'
-import { userDetail, resetUserPassword, deleteUser, type ManagedUser } from '@/services/users'
+import { userDetail, resetUserPassword, deleteUser, type IManagedUser } from '@/services/users'
 import { clearLocalSession, useSession } from '@/services/auth'
 import { validatePasswordChange } from '@/lib/user-validation'
 import { userError } from '@/lib/api-error'
 
-export type UserAction = { kind: 'detail' | 'reset' | 'delete'; user: ManagedUser }
+export type UserAction = { kind: 'detail' | 'reset' | 'delete'; user: IManagedUser }
 export function UserActionDialog({ action, onClose, onSuccess }: { action: UserAction; onClose: () => void; onSuccess: (message: string) => void }) {
   const session = useSession()
-  const [user, setUser] = useState<ManagedUser | null>(null)
+  const [user, setUser] = useState<IManagedUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [attempt, setAttempt] = useState(0)
   const [pending, setPending] = useState(false)
@@ -50,17 +51,17 @@ export function UserActionDialog({ action, onClose, onSuccess }: { action: UserA
       notify.error(status === 409 ? '资料已变化，请关闭弹窗、刷新列表后重试。' : status === 404 ? '该用户已不存在，请关闭弹窗并刷新列表。' : isAxiosError(cause) && cause.response?.data?.code === 'PROTECTED_USER' ? '不能删除当前账户或配置中的管理员。' : userError(cause))
     } finally { setPending(false) }
   }
-  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }}><DialogContent showCloseButton={!pending}>
-    <DialogHeader><DialogTitle>{titles[action.kind]}</DialogTitle><DialogDescription>{action.kind === 'detail' ? '用户资料与当前状态，不显示密码或登录凭据。' : action.kind === 'reset' ? '设置新密码后，旧密码与旧登录会话立即失效。' : '删除后无法恢复，该用户及其刷新会话将被移除。'}</DialogDescription></DialogHeader>
+  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }}><DialogContent aria-describedby={undefined} showCloseButton={!pending}>
+    <DialogHeader><DialogTitle>{titles[action.kind]}</DialogTitle></DialogHeader>
     {loading ? <p role="status">正在加载用户…</p> : user && <>
-      {action.kind === 'detail' ? <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-4 gap-y-4 text-sm">{[['用户 ID', user.id], ['用户名', user.username], ['显示名称', user.displayName], ['账户状态', user.enabled ? '已启用' : '已停用'], ['创建时间', new Date(user.createdAt).toLocaleString('zh-CN', { hour12: false })]].map(([label, value]) => <div key={label} className="contents"><dt className="text-muted-foreground">{label}</dt><dd className="break-all">{value}</dd></div>)}</dl> : <form onSubmit={submit} noValidate className="space-y-5" aria-busy={pending}>
+      {action.kind === 'detail' ? <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-4 gap-y-4 text-sm">{[['用户 ID', user.id], ['账号', user.username], ['姓名', user.displayName], ['手机号', user.phone || '—'], ['邮箱', user.email || '—'], ['账户状态', user.enabled ? '已启用' : '已停用'], ['创建时间', user.createdAt.replace('T', ' ').slice(0, 19)]].map(([label, value]) => <div key={label} className="contents"><dt className="text-muted-foreground">{label}</dt><dd className="break-all">{value}</dd></div>)}</dl> : <form onSubmit={submit} noValidate className="space-y-5" aria-busy={pending}>
         <div className="rounded-lg bg-secondary p-4 text-sm"><p className="break-all font-medium">{user.username}</p><p className="mt-1 break-all text-muted-foreground">{user.displayName}</p></div>
         {action.kind === 'reset' && <>
-          <div className="space-y-2"><label htmlFor="reset-password" className="text-sm">新密码</label><Input id="reset-password" type="password" autoComplete="new-password" value={password} disabled={pending} onChange={(event) => { setPassword(event.target.value); setErrors({ ...errors, password: '' }) }} aria-invalid={!!errors.password} aria-describedby={errors.password ? 'reset-password-error' : 'reset-hint'} />{errors.password && <p id="reset-password-error" role="alert" className="text-sm">{errors.password}</p>}</div>
+          <div className="space-y-2"><label htmlFor="reset-password" className="text-sm">新密码</label><PasswordGeneratorInput id="reset-password" value={password} disabled={pending} onValueChange={(value) => { setPassword(value); setErrors((previous) => ({ ...previous, password: '' })) }} onGenerate={() => { setConfirmPassword(''); setErrors({ password: '', confirmPassword: '' }) }} aria-invalid={!!errors.password} aria-describedby={errors.password ? 'reset-password-error' : 'reset-hint'} />{errors.password && <p id="reset-password-error" role="alert" className="text-sm">{errors.password}</p>}</div>
           <div className="space-y-2"><label htmlFor="reset-confirm" className="text-sm">确认新密码</label><Input id="reset-confirm" type="password" autoComplete="new-password" value={confirmPassword} disabled={pending} onChange={(event) => { setConfirmPassword(event.target.value); setErrors({ ...errors, confirmPassword: '' }) }} aria-invalid={!!errors.confirmPassword} aria-describedby={errors.confirmPassword ? 'reset-confirm-error' : undefined} />{errors.confirmPassword && <p id="reset-confirm-error" role="alert" className="text-sm">{errors.confirmPassword}</p>}</div>
           <p id="reset-hint" className="text-xs text-muted-foreground">密码 12～64 个字符，UTF-8 最多 72 字节。{user.id === session?.user.id && '你正在重置自己的密码，成功后将返回登录页。'}</p>
         </>}
-        {action.kind === 'delete' && <p className="text-sm">确定删除此用户吗？取消不会修改任何数据。</p>}
+        {action.kind === 'delete' && <p className="text-sm">确定删除此用户吗？删除后无法恢复，该用户及其刷新会话将被移除。</p>}
         <div className="flex justify-end gap-3"><Button id={action.kind === 'delete' ? 'cancel-delete' : undefined} type="button" variant="outline" disabled={pending} onClick={onClose}>取消</Button><Button type="submit" disabled={pending || (action.kind === 'delete' && user.id === session?.user.id)} className={action.kind === 'delete' ? 'bg-black/90 text-white hover:bg-black/80' : ''}>{pending ? '正在处理…' : action.kind === 'delete' ? '确认删除' : '确认重置密码'}</Button></div>
       </form>}
     </>}

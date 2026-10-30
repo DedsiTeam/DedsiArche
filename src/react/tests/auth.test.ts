@@ -2,6 +2,57 @@ import { expect, test } from 'bun:test'
 import { AxiosError } from 'axios'
 import { http } from '../src/services/http'
 
+test('profile cache avoids GET, merges concurrent reads, and rejects late responses after logout', async () => {
+  const storage = new Map<string, string>()
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+  } })
+  const { login, getProfile, clearLocalSession } = await import('../src/services/auth')
+  const original = http.defaults.adapter
+  const user = { id: 'cache-user', username: 'cached', displayName: '缓存用户', canManageUsers: false }
+  let count = 0
+  let release: () => void = () => undefined
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let started: () => void = () => undefined
+  const requested = new Promise<void>((resolve) => { started = resolve })
+  http.defaults.adapter = async (config) => {
+    let data: unknown = {
+      accessToken: 'cache-test-access', refreshToken: 'cache-test-refresh',
+      expiresAt: '2026-10-30T16:00:00', expiresAtEpochMs: Date.now() + 60_000, user,
+    }
+    if (config.url === '/api/users/me') {
+      count += 1
+      started()
+      await gate
+      data = user
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  try {
+    await login('cached', 'test-password')
+    expect(await getProfile()).toEqual(user)
+    expect(await getProfile()).toEqual(user)
+    expect(count).toBe(0)
+    expect(JSON.parse(storage.get('dedsi-arche.session')!).user).toEqual(user)
+    const first = getProfile(true)
+    const second = getProfile(true)
+    expect(first).toBe(second)
+    await requested
+    expect(count).toBe(1)
+    clearLocalSession()
+    const rejected = expect(first).rejects.toThrow()
+    release()
+    await rejected
+    expect(storage.size).toBe(0)
+  } finally {
+    release()
+    clearLocalSession()
+    http.defaults.adapter = original
+  }
+})
+
 test('login stores session, sends Bearer credentials, and logout revokes before clearing', async () => {
   const storage = new Map<string, string>()
   Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: {
@@ -11,7 +62,7 @@ test('login stores session, sends Bearer credentials, and logout revokes before 
   } })
   const { login, logout } = await import('../src/services/auth')
   const original = http.defaults.adapter
-  const session = { accessToken: 'test-access', refreshToken: 'test-refresh', expiresAt: new Date(Date.now() + 60_000).toISOString(), user: { id: '1', username: 'alice', displayName: 'Alice' } }
+  const session = { accessToken: 'test-access', refreshToken: 'test-refresh', expiresAt: '2026-10-30T16:00:00', expiresAtEpochMs: Date.now() + 60_000, user: { id: '1', username: 'alice', displayName: 'Alice', canManageUsers: false } }
   let failLogin = true
   let failLogout = false
   let rejectToken = false
@@ -65,8 +116,8 @@ test('profile updates session and concurrent refreshes share one rotating reques
   } })
   const { login, logout, updateProfile, refreshSession } = await import('../src/services/auth')
   const original = http.defaults.adapter
-  const user = { id: '1', username: 'alice', displayName: 'Alice' }
-  const credentials = { accessToken: 'old-access', refreshToken: 'old-refresh', expiresAt: new Date(Date.now() + 60_000).toISOString(), user }
+  const user = { id: '1', username: 'alice', displayName: 'Alice', canManageUsers: false }
+  const credentials = { accessToken: 'old-access', refreshToken: 'old-refresh', expiresAt: '2026-10-30T16:00:00', expiresAtEpochMs: Date.now() + 60_000, user }
   let refreshCount = 0
   let failRefresh = false
   http.defaults.adapter = async (config) => {

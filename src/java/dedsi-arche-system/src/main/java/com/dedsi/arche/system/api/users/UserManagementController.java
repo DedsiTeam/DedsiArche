@@ -29,12 +29,12 @@ import java.util.*;
 public class UserManagementController {
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager em;
-    private final UserRepository users;
-    private final UserQuery query;
+    private final IUserRepository users;
+    private final IUserQuery query;
     private final PasswordEncoder passwords;
     private final TokenService tokens;
     private final com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration;
-    public UserManagementController(UserRepository users, UserQuery query, PasswordEncoder passwords, TokenService tokens, com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration) {
+    public UserManagementController(IUserRepository users, IUserQuery query, PasswordEncoder passwords, TokenService tokens, com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration) {
         this.users=users; this.query=query; this.passwords=passwords; this.tokens=tokens;
         this.administration=administration;
     }
@@ -73,10 +73,11 @@ public class UserManagementController {
         if(user.getVersion()!=version) throw new ResponseStatusException(HttpStatus.CONFLICT,"资料已被修改，请刷新后重试");
     }
     @PostMapping("/page")
-    @Operation(summary="分页查询用户", description="管理员可按用户名或显示名称搜索、按状态筛选。页码从 1 开始。")
+    @Operation(summary="分页查询用户", description="管理员可按账号或姓名、手机号、邮箱和状态组合筛选。联系方式支持部分匹配，邮箱忽略大小写。页码从 1 开始。")
     @Transactional(readOnly=true)
     public UserPage list(@Valid @RequestBody UserPageRequest request) {
-        return query.search(request.keyword().trim(), request.enabled(), request.page(), request.size());
+        return query.search(request.keyword(), request.phone(), request.email(),
+                request.enabled(), request.page(), request.size());
     }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -84,24 +85,27 @@ public class UserManagementController {
     @Transactional
     public ManagedUserDto create(@Valid @RequestBody RegisterUserRequest request) {
         if (request.password().getBytes(StandardCharsets.UTF_8).length>72) throw new BusinessException("PASSWORD_TOO_LONG","密码 UTF-8 编码最多 72 字节");
-        if(users.findByUsername(User.normalizeUsername(request.username())).isPresent()) throw new BusinessException("USERNAME_EXISTS","用户名已存在");
+        if(users.findByUsername(User.normalizeUsername(request.username())).isPresent()) throw new BusinessException("USERNAME_EXISTS","账号已存在");
         var user=users.save(User.register(request.username(),request.displayName(),passwords.encode(request.password())));
+        user.updateContact(request.phone(), request.email());
         return dto(user);
     }
     @PatchMapping("/{id}")
-    @Operation(summary="编辑用户名称和启用状态", description="提交列表返回的 version 防止覆盖他人的更新；不能停用自己。停用会撤销刷新会话。")
+    @Operation(summary="编辑账号称和启用状态", description="提交列表返回的 version 防止覆盖他人的更新；不能停用自己。停用会撤销刷新会话。")
     @Transactional
     public ManagedUserDto update(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ManageUserRequest request) {
         var user=users.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"用户不存在"));
         if(!Objects.equals(user.getVersion(),request.version())) throw new ResponseStatusException(HttpStatus.CONFLICT,"资料已被修改，请刷新后重试");
         if(id.toString().equals(jwt.getSubject()) && !request.enabled()) throw new BusinessException("CANNOT_DISABLE_SELF","不能停用当前登录账户");
         user.rename(request.displayName());
+        user.updateContact(request.phone() == null ? user.getPhone() : request.phone(),
+                request.email() == null ? user.getEmail() : request.email());
         if (user.isEnabled() && !request.enabled()) tokens.revokeAll(id);
         user.setEnabled(request.enabled());
         em.flush();
         return dto(user);
     }
     private ManagedUserDto dto(User u) {
-        return new ManagedUserDto(u.getId(),u.getUsername(),u.getDisplayName(),u.isEnabled(),u.getCreatedAt(),u.getVersion());
+        return new ManagedUserDto(u.getId(),u.getUsername(),u.getDisplayName(),u.isEnabled(),u.getCreatedAt(),u.getVersion(),u.getPhone(),u.getEmail());
     }
 }
