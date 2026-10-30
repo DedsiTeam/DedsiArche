@@ -60,14 +60,14 @@ export function UserActionDialog({ action, onClose, onSuccess }: { action: UserA
       notify.error(status === 409 ? '资料已变化，请关闭弹窗、刷新列表后重试。' : status === 404 ? '该用户已不存在，请关闭弹窗并刷新列表。' : isAxiosError(cause) && cause.response?.data?.code === 'PROTECTED_USER' ? '不能删除当前账户或配置中的管理员。' : userError(cause))
     } finally { setPending(false) }
   }
-  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }}><DialogContent className={action.kind === 'detail' ? 'flex h-[85vh] max-h-[820px] w-[calc(100vw-48px)] max-w-[1320px] flex-col overflow-hidden' : undefined} aria-describedby={undefined} showCloseButton={!pending}>
-    <DialogHeader><DialogTitle>{titles[action.kind]}</DialogTitle></DialogHeader>
+  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }}><DialogContent className={action.kind === 'detail' ? 'flex h-[82vh] max-h-[760px] w-[calc(100vw-48px)] max-w-[1280px] flex-col gap-5 overflow-hidden bg-card' : undefined} aria-describedby={undefined} showCloseButton={!pending}>
+    <DialogHeader className={action.kind === 'detail' ? 'shrink-0 border-b pb-4' : undefined}><DialogTitle>{titles[action.kind]}</DialogTitle></DialogHeader>
     {loading ? <p role="status">正在加载用户…</p> : user && <>
       {action.kind === 'detail' ? (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6">
-          <section aria-label="基本信息" className="min-w-0 space-y-4 overflow-y-auto overscroll-contain py-1 pr-3">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,0.85fr)_minmax(0,2fr)] gap-5">
+          <section aria-label="基本信息" className="min-w-0 space-y-4 overflow-y-auto overscroll-contain py-1 pr-4">
             <h2 className="text-sm font-semibold">基本信息</h2>
-            <dl className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 text-sm">
+            <dl className="grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-4 text-sm">
               {[
                 ['用户 ID', user.id], ['账号', user.username], ['姓名', user.displayName],
                 ['手机号', user.phone || '—'], ['邮箱', user.email || '—'],
@@ -81,18 +81,18 @@ export function UserActionDialog({ action, onClose, onSuccess }: { action: UserA
               ))}
             </dl>
           </section>
-          <section className="min-w-0 space-y-3 overflow-y-auto overscroll-contain border-l py-1 pl-6 pr-2" aria-label="用户岗位快照">
-            <h3 className="text-sm font-medium">用户岗位（{user.positions.length}）</h3>
+          <section className="min-w-0 space-y-3 overflow-y-auto overscroll-contain border-l py-1 pl-5" aria-label="用户岗位快照">
+            <h3 className="text-sm font-semibold">用户岗位 <span className="ml-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs tabular-nums text-primary">{user.positions.length}</span></h3>
             <p className="text-xs text-muted-foreground">以下为保存时的岗位及系统快照，重新保存岗位集合时刷新。</p>
             {user.positions.length === 0 ? <p className="text-sm text-muted-foreground">尚未分配岗位。</p> : (
-              <div className="rounded-md border">
+              <div className="overflow-hidden rounded-lg border bg-card">
                 <Table className="w-full table-auto [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
-                  <TableHeader className="bg-secondary"><TableRow>
+                  <TableHeader className="bg-muted/30"><TableRow>
                     <TableHead>岗位编码</TableHead><TableHead>岗位名称</TableHead>
                     <TableHead>系统编码</TableHead><TableHead>系统名称</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>{user.positions.map((position) => (
-                    <TableRow key={position.id} className="even:bg-muted/60">
+                    <TableRow key={position.id} className="even:bg-muted/20 hover:bg-primary/5">
                       <TableCell className="font-mono text-xs">{position.positionCode}</TableCell>
                       <TableCell className="max-w-48 truncate" title={position.positionName}>{position.positionName}</TableCell>
                       <TableCell className="font-mono text-xs">{position.systemCode ?? '未设置'}</TableCell>

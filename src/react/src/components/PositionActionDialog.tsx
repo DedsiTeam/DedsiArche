@@ -77,9 +77,9 @@ export function PositionActionDialog({ action, onClose, onSuccess }: IPositionAc
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }}>
       <DialogContent className={action.kind === 'detail'
-        ? 'flex h-[85vh] max-h-[820px] w-[calc(100vw-48px)] max-w-[1320px] flex-col overflow-hidden'
+        ? 'flex h-[82vh] max-h-[760px] w-[calc(100vw-48px)] max-w-[1280px] flex-col gap-5 overflow-hidden bg-card'
         : 'w-[calc(100vw-48px)] max-w-4xl'} aria-describedby={undefined} showCloseButton={!pending}>
-        <DialogHeader><DialogTitle>{titles[action.kind]}</DialogTitle></DialogHeader>
+        <DialogHeader className={action.kind === 'detail' ? 'shrink-0 border-b pb-4' : undefined}><DialogTitle>{titles[action.kind]}</DialogTitle></DialogHeader>
         {loading ? <p role="status">正在加载岗位…</p> : error ? (
           <div className="space-y-3">
             <p role="alert" className="text-sm text-error">{error}</p>
@@ -91,10 +91,10 @@ export function PositionActionDialog({ action, onClose, onSuccess }: IPositionAc
           </div>
         ) : position && (
           action.kind === 'detail' ? (
-            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6">
-              <section aria-label="基本信息" className="min-w-0 space-y-4 overflow-y-auto overscroll-contain py-1 pr-3">
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,0.85fr)_minmax(0,2fr)] gap-5">
+              <section aria-label="基本信息" className="min-w-0 space-y-4 overflow-y-auto overscroll-contain py-1 pr-4">
                 <h2 className="text-sm font-semibold">基本信息</h2>
-                <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-4 text-sm">
+                <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-4 text-sm">
                   {details.map(([label, value]) => (
                     <div key={label} className="contents">
                       <dt className="text-muted-foreground">{label}</dt>
@@ -103,17 +103,17 @@ export function PositionActionDialog({ action, onClose, onSuccess }: IPositionAc
                   ))}
                 </dl>
               </section>
-              <section aria-label="岗位权限" className="min-w-0 space-y-3 overflow-y-auto overscroll-contain border-l py-1 pl-6 pr-2">
-                <h3 className="text-sm font-semibold">岗位权限（{position.permissions.length}）</h3>
+              <section aria-label="岗位权限" className="min-w-0 space-y-3 overflow-y-auto overscroll-contain border-l py-1 pl-5">
+                <h3 className="text-sm font-semibold">岗位权限 <span className="ml-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs tabular-nums text-primary">{position.permissions.length}</span></h3>
                 {position.permissions.length === 0 ? <p className="text-sm text-muted-foreground">此岗位尚未配置权限。</p> : (
-                  <div className="rounded-md border">
+                  <div className="overflow-hidden rounded-lg border bg-card">
                     <Table className="w-full table-auto [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
-                      <TableHeader className="bg-secondary"><TableRow>
+                      <TableHeader className="bg-muted/30"><TableRow>
                         <TableHead>所属系统编码</TableHead><TableHead>所属系统名称</TableHead>
                         <TableHead>权限编码</TableHead><TableHead>权限名称</TableHead>
                       </TableRow></TableHeader>
                       <TableBody>{position.permissions.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className="even:bg-muted/20 hover:bg-primary/5">
                           <TableCell className="font-mono text-xs">{item.systemCode}</TableCell>
                           <TableCell className="max-w-48 truncate" title={item.systemName}>{item.systemName}</TableCell>
                           <TableCell className="font-mono text-xs">{item.permissionCode}</TableCell>
