@@ -4,6 +4,9 @@ import com.dedsi.arche.system.api.systems.request.*;
 import com.dedsi.arche.system.domain.systems.*;
 import com.dedsi.arche.system.domain.systems.query.*;
 import com.dedsi.arche.system.domain.permissions.IPermissionRepository;
+import com.dedsi.arche.system.domain.positions.IPositionRepository;
+import com.dedsi.arche.system.domain.systems.events.SystemRegisteredEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,18 +31,26 @@ public class ManagedSystemController {
     private final IManagedSystemQuery query;
     private final IPermissionRepository permissions;
     private final EntityManager em;
+    /* 系统根删除前检查岗位归属。 */
+    private final IPositionRepository positions;
+    /* 在当前事务内同步发布领域事件。 */
+    private final ApplicationEventPublisher events;
 
     /** 注入仓储、只读查询和事务内刷新的实体管理器。 */
     public ManagedSystemController(
             IManagedSystemRepository systems,
             IManagedSystemQuery query,
             IPermissionRepository permissions,
-            EntityManager em
+            EntityManager em,
+            IPositionRepository positions,
+            ApplicationEventPublisher events
     ) {
         this.systems = systems;
         this.query = query;
         this.permissions = permissions;
         this.em = em;
+        this.positions = positions;
+        this.events = events;
     }
 
     /** 提供管理页面的系统下拉选项，沿用类级管理员鉴权。 */
@@ -65,7 +76,7 @@ public class ManagedSystemController {
                 request.sortOrder() == null ? 0 : request.sortOrder()
         ));
         em.flush();
-        permissions.synchronizeSystemName(system.getCode(), system.getName());
+        events.publishEvent(new SystemRegisteredEvent(system.getCode(), system.getName()));
         return dto(system);
     }
 
@@ -88,7 +99,7 @@ public class ManagedSystemController {
 
     /** 在同一事务内更名并同步权限冗余名称，同时推进权限版本以拒绝旧编辑。 */
     @PatchMapping("/{id}")
-    @Operation(summary = "编辑系统", description = "version 必填；null/省略保留，说明和入口空串清除。正常状态必须有入口。")
+    @Operation(summary = "编辑系统", description = "version 必填；null/省略保留，说明和入口空串清除。系统改名同事务同步权限、岗位及岗位权限中的系统名称并推进版本。正常状态必须有入口。")
     @Transactional
     public ManagedSystemDto update(
             @PathVariable String id,
@@ -96,31 +107,27 @@ public class ManagedSystemController {
     ) {
         var system = lock(id);
         checkVersion(system, request.version());
-        String previousName = system.getName();
         system.update(
                 request.name() == null ? system.getName() : request.name(),
                 request.description() == null ? system.getDescription() : request.description(),
                 request.entryUrl() == null ? system.getEntryUrl() : request.entryUrl(),
                 request.status() == null ? system.getStatus() : request.status(),
                 request.sortOrder() == null ? system.getSortOrder() : request.sortOrder()
-        );
+        ).ifPresent(events::publishEvent);
         em.flush();
-        if (!previousName.equals(system.getName())) {
-            permissions.synchronizeSystemName(system.getCode(), system.getName());
-        }
         return dto(system);
     }
 
     /** 有关联权限时拒绝删除，避免留下无所属系统的权限。 */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "删除系统", description = "提交当前 version；有关联权限时返回 409。")
+    @Operation(summary = "删除系统", description = "提交当前 version；有关联权限或岗位时返回 409。")
     @Transactional
     public void delete(@PathVariable String id, @RequestParam @Min(0) long version) {
         var system = lock(id);
         checkVersion(system, version);
-        if (permissions.existsBySystemCode(system.getCode())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "系统下存在权限，不能删除");
+        if (permissions.existsBySystemCode(system.getCode()) || positions.existsBySystemCode(system.getCode())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "系统下存在权限或岗位，不能删除");
         }
         systems.delete(system);
         em.flush();

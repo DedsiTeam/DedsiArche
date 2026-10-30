@@ -7,6 +7,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Optional;
+import com.dedsi.arche.system.domain.systems.events.SystemRenamedEvent;
 
 /** 系统聚合根，维护入口、状态和展示资料；不承担用户授权职责。 */
 @Entity
@@ -79,8 +81,8 @@ public class ManagedSystem {
         return system;
     }
 
-    /** 全部校验成功后才修改状态，失败操作不能留下部分更新。 */
-    public void update(
+    /** 全部校验成功后修改状态；仅已有名称实际变化时返回事件，创建不产生改名事件。 */
+    public Optional<SystemRenamedEvent> update(
             String name,
             String description,
             String entryUrl,
@@ -99,12 +101,17 @@ public class ManagedSystem {
         if (status == SystemStatus.NORMAL && nextUrl == null) {
             throw new BusinessException("SYSTEM_ENTRY_REQUIRED", "正常状态必须配置入口地址");
         }
+        String previousName = this.name;
         this.name = nextName;
         this.description = nextDescription;
         this.entryUrl = nextUrl;
         this.status = status;
         this.sortOrder = sortOrder;
         this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        if (previousName != null && !previousName.equals(nextName)) {
+            return Optional.of(new SystemRenamedEvent(code, previousName, nextName));
+        }
+        return Optional.empty();
     }
 
     /** 必填文本去除首尾空白，最长 100 字符。 */

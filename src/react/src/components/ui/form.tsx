@@ -54,6 +54,8 @@ export interface IFormProps<T extends FieldValues> {
   children?: ReactNode | ((form: UseFormReturn<T>) => ReactNode)
   className?: string
   fieldsClassName?: string
+  /** 仅调整可见字段布局；保留同一表单的校验、字段生命周期与提交。 */
+  renderFields?: (fields: { name: FieldPath<T>; node: ReactNode }[]) => ReactNode
   'aria-label'?: string
 }
 
@@ -117,13 +119,17 @@ function ConfiguredField<T extends FieldValues>({ config, form }: { config: Form
 }
 
 /** 与现有 UI 共用主题；业务层持有 useForm 实例，可 reset/setValue/trigger/setError。 */
-export function Form<T extends FieldValues>({ form, fields, onSubmit, validate, mapError, children, className, fieldsClassName, 'aria-label': label }: IFormProps<T>) {
+export function Form<T extends FieldValues>({ form, fields, onSubmit, validate, mapError, children, className, fieldsClassName, renderFields, 'aria-label': label }: IFormProps<T>) {
   const values = useWatch({ control: form.control }) as T
   const lock = useRef(false)
   const request = useRef<AbortController | null>(null)
   const rootError = useRef<HTMLParagraphElement>(null)
   useEffect(() => () => { request.current?.abort() }, [])
   const visibleFields = fields.filter((item) => !item.visible || item.visible(values))
+  const fieldNodes = visibleFields.map((config) => ({
+    name: config.name,
+    node: <ConfiguredField key={config.name} config={config} form={form} />,
+  }))
   function applyIssues(issues: readonly FormIssue<T>[]) {
     const generalMessages: string[] = []
     for (const issue of issues) {
@@ -164,7 +170,7 @@ export function Form<T extends FieldValues>({ form, fields, onSubmit, validate, 
       } finally { lock.current = false }
     }}>
       <div className={cn('space-y-5', fieldsClassName)}>
-        {visibleFields.map((config) => <ConfiguredField key={config.name} config={config} form={form} />)}
+        {renderFields ? renderFields(fieldNodes) : fieldNodes.map((field) => field.node)}
       </div>
       {form.formState.errors.root?.business?.message && <p ref={rootError} tabIndex={-1} role="alert" className="text-sm text-error">{form.formState.errors.root.business.message}</p>}
       {typeof children === 'function' ? children(form) : children}

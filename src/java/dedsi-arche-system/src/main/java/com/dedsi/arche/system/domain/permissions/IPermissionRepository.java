@@ -10,14 +10,17 @@ public interface IPermissionRepository {
     /** 检查系统下是否存在权限，用于系统删除保护。 */
     boolean existsBySystemCode(String systemCode);
 
-    /** 同步系统名称，并推进受影响权限的版本和更新时间。 */
-    void synchronizeSystemName(String systemCode, String systemName);
+    /** 按权限 ID 顺序加写锁并刷新，供系统名称事件同步使用；调用方已持有系统锁。 */
+    java.util.List<Permission> lockAllBySystemCode(String systemCode);
 
 
     /**
      * 按 ULID 加载权限，不存在时返回空结果。
      */
     Optional<Permission> findById(String id);
+
+    /** 锁定并刷新权限定义供岗位配置使用；调用方按权限 ID 顺序调用，锁持有到事务结束。 */
+    Optional<Permission> lockByIdForPosition(String id);
 
     /**
      * 检查同一系统下的权限编码是否已存在。

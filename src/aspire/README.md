@@ -4,15 +4,23 @@
 
 ## 启动
 
-前置条件：Docker Desktop（Linux 容器）、.NET 10 SDK、JDK 26、全局 Maven、Bun；准备 `DedsiArche.AppHost/appsettings.json`。使用 C:\Dockers 中已迁移的数据，不初始化新的开发库。
+前置条件：Docker Desktop（Linux 容器）、.NET 10 SDK、JDK 26、全局 Maven、Bun；准备 `DedsiArche.AppHost/appsettings.json`。使用配置目录中的已有数据，不初始化新的开发库。
 
-从仓库根目录执行：
+Windows 配置模板为 `DedsiArche.AppHost/appsettings.example.json`。当前 Mac 配置模板为 `DedsiArche.AppHost/appsettings.mac.example.json`，PostgreSQL 和 Redis 数据目录分别为 `/Users/cohen/Cohen/Dockers/PostgreSql/DedsiArcheDB`、`/Users/cohen/Cohen/Dockers/Redis/DedsiArche`。将对应模板复制为同目录的 `appsettings.json`，填写已有数据库、Redis 凭据与 JWT 密钥，并先恢复对应数据文件。启动脚本在缺少 `appsettings.json` 时会复制当前系统的模板并停止，提示填写凭据；已有配置不会被覆盖。两个入口最终均读取 `appsettings.json`，在系统之间复制配置时需自行调整数据路径。
+
+Windows 从仓库根目录执行：
 
 ```powershell
 .\src\aspire\start.ps1
 ```
 
-入口检查迁移后的数据文件和端口，安装前端依赖、构建 AppHost 和后端（跳过测试），随后启动 Aspire。已运行的 Aspire 或 IDE 后端需要先手动停止。脚本使用 UTF-8 BOM 编码，兼容 Windows PowerShell 5.1。
+macOS 从仓库根目录执行（使用系统 Bash，无需安装 PowerShell）：
+
+```bash
+./src/aspire/start.sh
+```
+
+macOS 需要 `mvn` 在 PATH 中；Windows 使用 `mvn.cmd`。两个入口检查凭据占位值、已有数据文件和端口，安装前端依赖、构建 AppHost 和后端（跳过测试编译与执行），随后启动 Aspire。Mac 入口使用 `plutil` 读取 JSON、`lsof` 检查端口，应用端口已占用时拒绝启动，不自动结束进程。请先手动停止已运行的 Aspire 或 IDE 后端；Persistent 数据库容器可保持运行。Windows 脚本保留 UTF-8 BOM 编码，兼容 Windows PowerShell 5.1；在 macOS 的 PowerShell 7 中调用 `start.ps1` 会转交 `start.sh`。
 
 | 资源 | 地址/端口 |
 | --- | --- |
@@ -66,3 +74,9 @@ Aspire 不读取 Java 的 .env，并为 Java 子进程覆盖可选 .env 导入�
 运行 `src/scripts/run-local.ps1`，或使用 IDEA 启动后端。继续使用 `src/java/.env` 和 `application.yml`，不读取 Aspire 的 appsettings.json。原启动脚本无需改动。
 
 两种方式不能同时占用相同后端端口。独立启动 Java 前，先停止 Aspire 后端；PostgreSQL 和 Redis 使用持久容器，仍可继续提供服务。若修改基础设施端口或密码，需要同步 Java 独立启动的 DB_URL、DB_USER、DB_PASSWORD、REDIS_HOST、REDIS_PORT、REDIS_PASSWORD；两份配置不自动互相覆盖。
+
+## 默认账号
+
+Flyway `V8__default_local_user.sql` 在新环境首次启动时自动创建已启用的 `dedsi_user`，使用约定的初始密码。迁移只保存 BCrypt 哈希（工作因子 12），不保存明文密码。同名账号已存在时跳过，不重置密码、不修改资料或启用状态。此版本迁移只执行一次，日后删除账号不会在每次启动时重新创建。
+
+Aspire 模板已将 `dedsi_user` 放入 `Backend:AdminUsernames`；Java 独立启动时通过 `USER_ADMIN_USERNAMES=dedsi_user` 指定管理员。创建账号本身不绕过后端管理员名单校验。

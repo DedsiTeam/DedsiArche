@@ -119,7 +119,7 @@ Host 定义标题和认证方案，业务模块在 Controller/DTO 上声明中�
 管理员新增、修改、详情和列表支持这两个字段。PATCH 省略或传 null 保留原值，空字符串清除。现有个人资料接口仍只修改姓名，不会覆盖联系方式。
 Flyway V3 仅为 sys_users 增加 phone VARCHAR(16)、email VARCHAR(254) 两个可空列；旧数据保持不变。
 
-按领域合并的完整 SQL 结构快照（截至 V7）：[用户及刷新会话](docs/sql/system/users.sql)、[权限](docs/sql/system/permissions.sql)、[系统管理](docs/sql/system/managed_systems.sql)。每份包含最终字段、约束、索引和中文数据库注释，业务时间字段直接使用北京时间本地类型。快照仅供阅读参考，不由应用自动执行；新环境和现有环境均继续使用原 Flyway 迁移链。不要将快照直接执行到已有业务库，或复制到 Flyway 扫描目录。
+按领域合并的完整 SQL 结构快照（各文件标注自己的截止版本）：[用户、用户岗位及刷新会话](docs/sql/system/users.sql)、[权限](docs/sql/system/permissions.sql)、[系统管理](docs/sql/system/managed_systems.sql)。每份包含最终字段、约束、索引和中文数据库注释，业务时间字段直接使用北京时间本地类型。快照仅供阅读参考，不由应用自动执行；新环境和现有环境均继续使用原 Flyway 迁移链。不要将快照直接执行到已有业务库，或复制到 Flyway 扫描目录。
 
 
 ## 权限管理
@@ -139,7 +139,7 @@ User 与 Permission 的纯单元测试位于 `dedsi-arche-system/src/test/java/c
 主键使用 ULID（大写 26 字符字符串），由 ulid-creator 5.2.4 在服务端生成；User 继续使用 UUID。
 Flyway V4 新建 sys_permissions，不修改已有用户数据。systemCode + code 联合唯一，区分大小写，保存时去除首尾空白，创建后不可修改。
 系统编码、系统名称、权限编码、权限名称最多 100 字符；说明最多 500 字符；排序值为非负整数。
-systemName 由系统目录读取，权限新增和更新不再采用客户端提交的系统名称；系统更名会同步权限名称并递增权限版本。已有无系统目录的权限保留，需登记相同 code 的系统后才能编辑。系统引用通过服务端统一行锁和删除检查维护，不添加跳过旧数据验证的外键。
+systemName 由系统目录读取，权限新增和更新不再采用客户端提交的系统名称；系统更名会同步权限中的系统名称并递增受影响权限版本。已有无系统目录的权限保留，需登记相同 code 的系统后才能编辑。系统引用通过服务端统一行锁和删除检查维护，不添加跳过旧数据验证的外键。
 
 接口均要求 Bearer JWT 和现有配置中的管理员身份，路径需加部署的 context-path（默认 /dedsi-arche-api）。
 
@@ -185,7 +185,7 @@ code 去除首尾空白后全局唯一、区分大小写，创建后不可修改
 | GET | /api/systems/{id} | 详情 |
 | POST | /api/systems/page | 按编码/名称关键词及状态分页 |
 | PATCH | /api/systems/{id} | 编辑资料、入口、状态和排序 |
-| DELETE | /api/systems/{id}?version=0 | 无关联权限时删除，204 |
+| DELETE | /api/systems/{id}?version=0 | 无关联权限和岗位根引用时删除，204 |
 
 新增示例：
 
@@ -197,8 +197,109 @@ code 去除首尾空白后全局唯一、区分大小写，创建后不可修改
 PATCH 必填 version，其他字段省略或 null 保留原值；description/entryUrl 空串清除，name 空白非法；NORMAL 状态不可清除入口。
 更新示例：`{"name":"新系统名称","status":"MAINTENANCE","version":0}`。
 分页示例：`{"keyword":"平台","status":"NORMAL","page":1,"size":10}`，page 默认 1（最大 1000000），size 默认 10（最大 100），返回 items/total/page/size，按 sortOrder、id 升序。
-格式/业务校验错误 400，未认证 401，非管理员 403，不存在 404，重复编码、旧版本及有关联权限的删除返回 409。
-系统写操作与权限创建/编辑统一锁系统记录；系统更名同事务更新权限名称、更新时间和版本，权限旧版本提交返回 409。删除只检查和拒绝，不级联清理权限。
+格式/业务校验错误 400，未认证 401，非管理员 403，不存在 404，重复编码、旧版本及有关联权限或岗位根引用的删除返回 409。
+系统写操作与权限及已登记岗位写入先锁系统记录；系统更名通过同步领域事件同事务更新权限、岗位根及岗位权限中的系统名称，并推进实际变化的聚合版本。权限及岗位旧版本提交返回 409。系统存在权限或岗位根引用时禁止删除，不级联清理。
 V6 仅新增系统表；不自动创建系统、不删除已有权限。登记已有权限使用的 code 时同步其名称。
 接口自动进入既有 system OpenAPI 分组。纯单元测试源文件为 `ManagedSystemUnitTests`，经用户授权后可在本目录执行：
 `mvn.cmd -pl dedsi-arche-system -am test "-Dtest=ManagedSystemUnitTests" "-Dsurefire.failIfNoSpecifiedTests=false"`。
+
+## 默认账号
+
+Flyway `V8__default_local_user.sql` 在新环境首次启动时自动创建已启用的 `dedsi_user`，使用约定的初始密码。迁移只保存 BCrypt 哈希（工作因子 12），不保存明文密码。同名账号已存在时跳过，不重置密码、不修改资料或启用状态。此版本迁移只执行一次，日后删除账号不会在每次启动时重新创建。
+
+Aspire 模板已将 `dedsi_user` 放入 `Backend:AdminUsernames`；Java 独立启动时通过 `USER_ADMIN_USERNAMES=dedsi_user` 指定管理员。创建账号本身不绕过后端管理员名单校验。
+
+## 岗位管理
+
+岗位聚合位于 `domain.positions`，包括 id、systemCode、systemName、code、name、description、enabled、sortOrder、createdAt、updatedAt、version 和权限子实体集合。岗位与子实体主键均为 26 位 ULID；岗位编码区分大小写、全局唯一，创建后不可修改。编码和名称最多 100 字符，说明最多 500 字符，排序值非负；业务时间为北京时间本地时间。
+
+权限子实体包含 id、positionId、permissionId、systemCode、systemName、permissionCode、permissionName。配置权限时客户端只提交 permissionIds，后端读取已有权限定义并保存系统与权限信息，不采信客户端名称；系统及权限名称由相应改名事件同事务维护。同一岗位不能重复关联同一权限，不同系统的同名权限编码可同时关联。允许关联停用的权限定义；本版仅维护岗位配置，不接入用户岗位分配、登录权限或权限码鉴权。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | /api/positions | 创建岗位，返回 201 和详情 |
+| GET | /api/positions/{id} | 查询岗位详情，包含权限快照 |
+| POST | /api/positions/page | 查询岗位分页，不加载权限集合 |
+| PATCH | /api/positions/{id} | 部分更新，必须提交 version |
+| DELETE | /api/positions/{id}?version=0 | 未被用户引用时删除岗位及关联，返回 204；引用中返回 POSITION_IN_USE/409 |
+
+所有接口复用 `userAdministration.canManage(authentication)` 服务端鉴权，自动纳入现有 system OpenAPI 分组。未认证 401、非管理员 403、岗位不存在 404、格式或业务校验失败 400、唯一键或版本冲突 409；响应沿用 ProblemDetail。业务错误码包括 INVALID_POSITION、DUPLICATE_POSITION_PERMISSION、POSITION_PERMISSION_NOT_FOUND。
+
+创建示例（permissionIds 中填写现有权限 ID，也可传空数组）：
+
+```json
+{
+  "systemCode": "arche",
+  "code": "manager",
+  "name": "经理",
+  "description": "负责日常业务管理",
+  "enabled": true,
+  "sortOrder": 0,
+  "permissionIds": []
+}
+```
+
+创建时 enabled 省略或 null 默认 true，sortOrder 默认 0，permissionIds 默认空集合。PATCH 的 version 必填，其他字段省略或 null 均保持原值；description 传空白清除，name 传空白拒绝。permissionIds 传空数组清空，非空数组全量替换权限集合，同时刷新保留关联的快照并保留其子实体 ID。权限名称实际变化时，通过 Spring 原生同步领域事件，在同一事务内更新全部岗位引用的 permissionName 并推进岗位 updatedAt 和 version；同步失败时权限改名一并回滚。系统名称实际变化也通过同步领域事件更新 Permission.systemName、岗位根 systemName 及匹配的岗位权限子实体 systemName；根和子项同时匹配时岗位版本仅推进一次。
+
+```json
+{"version": 0, "name": "业务经理", "permissionIds": []}
+```
+
+分页请求：`{"keyword":"经理","enabled":true,"page":1,"size":10}`。keyword 匹配编码或名称，忽略大小写；enabled 可省略。page 默认 1、最大 1000000；size 默认 10、最大 100。结果为 items / total / page / size，按 sortOrder、id 稳定排序，权限集合由详情接口查询。
+
+Flyway V9 新增 sys_positions 和 sys_position_permissions，不改写已有迁移。子实体通过外键关联岗位及权限定义；有关联的权限删除返回 409，须先移除岗位关联，不级联删除岗位。唯一约束防止重复编码和重复关联。岗位版本保护基本信息和权限集合，写操作在响应前 flush。完整结构及逐列中文注释见 [岗位 SQL 快照](docs/sql/system/positions.sql)（截至 V11，仅供阅读，不能直接执行到现有数据库）。
+
+纯单元测试代码为 PositionUnitTests，验证领域输入、快照更新、集合替换与失败状态；不验证数据库唯一约束、JPA 版本递增或 HTTP 鉴权。默认不执行测试。
+
+岗位仓储通过单条 `LEFT JOIN FETCH` 查询加载根实体及权限集合，详情、修改与删除共用此入口，避免并发更新时根字段和权限集合来自不同数据库快照。
+
+显式授权后可运行 `src/scripts/test-position-api.py --session-file <本机登录会话JSON路径> --report <报告路径>`。脚本使用正常登录产生的 accessToken，不创建账号、不记录凭据；创建唯一编码的系统、权限和岗位，并在结束时清理本次数据。覆盖整存整取、快照刷新、权限清空、并发版本冲突、受控数据库行锁下的事务回滚和整体删除。数据库锁仅作用于本次测试岗位，自动释放；脚本不默认运行，也不接入启动流程。
+
+权限领域的 `update` 在完成全部校验后，仅针对规范化名称实际变化返回不可变 `PermissionRenamedEvent`；创建及同名更新不产生改名事件。权限 API 在已有事务中显式发布，普通同步 `@EventListener` 以 `MANDATORY` 加入事务，通过岗位领域行为修改引用名称；不使用异步、提交后监听、独立事务或消息中间件。系统名称由独立的 SystemRenamedEvent 协调，不产生 PermissionRenamedEvent。
+
+权限更名按系统行锁、权限写锁、岗位写入的顺序执行；岗位创建及已登记岗位编辑先锁所属系统，然后按权限 ID 升序获取读锁并刷新所选权限记录，锁持续到事务结束，避免并发新增关联漏掉更名。监听器按岗位 ID 稳定顺序完整加载全部子实体，实际名称变化才推进根修改时间；重复同名处理或无引用不推进岗位版本。岗位的旧编辑请求会因同步产生的版本变化返回 409，需重新读取。Flyway V10 只更新表与字段中文说明，不修改 V9，不自动回填此前的历史名称快照。
+
+### 岗位所属系统与系统名称同步
+
+创建岗位必须提交已登记的 `systemCode`（最多 100 字符），`systemName` 完全由服务端读取。岗位根所属系统不限制其权限来自其他系统。详情和分页都返回根 `systemCode/systemName`；旧岗位迁移后两者仍为 null，不根据权限猜测归属。PATCH 省略或 null 保持；旧 null 可首次绑定，已绑定只接受相同编码，空白、改值或解绑均拒绝。错误码包括 POSITION_SYSTEM_NOT_FOUND、POSITION_SYSTEM_IMMUTABLE；版本冲突仍返回 409。
+
+ManagedSystem 仅在名称实际变化时返回纯领域 `SystemRenamedEvent`，API 在原事务显式发布。单一同步监听器以 MANDATORY 加入事务，按“系统锁 → 权限 ID 顺序写锁并刷新 → 岗位 ID 顺序完整聚合更新”协调；Permission 仅更新 systemName，不连带发布权限改名事件。岗位查询通过根系统条件或子项 EXISTS 条件筛选并 fetch 全部权限，避免截断集合。首次登记系统发布 SystemRegisteredEvent，复用相同协调逻辑，继续修正已有同编码权限与岗位子项名称，但不为历史岗位根自动绑定系统。
+
+系统改名只更新匹配的系统名称，保留权限名称、系统编码、岗位归属及其他资料；没有实际变化不推进被引用聚合版本。任一同步失败，系统本身及全部引用共同回滚。并发岗位创建、首次绑定及已有岗位编辑先锁系统再读取所选权限，避免写入过期名称。系统删除检查权限和岗位根引用，外键兜底并发删除；不删除关联业务数据。
+
+Flyway V11 为岗位根新增可空 system_code/system_name、成对空值检查、到 sys_systems(code) 的外键和查询索引，并更新中文注释；不修改已执行的 V1—V10、不回填历史岗位归属。SQL 快照折叠至 V11。新增测试代码覆盖系统事件、失败无事件、首次绑定与不可变归属、根及子项联合同步、跨系统引用及幂等；构建和测试执行分别由本次授权决定。
+
+## 用户岗位子实体与整聚合保存
+
+User 仍使用 UUID 主键，新增其私有的一组 UserPosition 子实体。每项包含 id（26 位 ULID）、userId（UUID）、positionId（26 位 ULID）以及 positionCode、positionName、systemCode、systemName 四个配置时快照。岗位仍是独立聚合，用户仅持有关联与快照，不包含岗位权限子实体。历史岗位所属系统未登记时，两个系统快照均为 null；不根据权限推测归属。
+
+管理员新增请求使用独立 CreateManagedUserRequest，支持可选 positionIds；省略或 null 默认为空。公开 `/api/users/register` 继续使用原 RegisterUserRequest，不能借此分配岗位。管理员 PATCH 保留姓名 displayName、enabled、version 必填契约，positionIds 省略/null 保持、空数组清空、非空列表全量替换并刷新快照；同一岗位不能重复，缺失或非法岗位返回 400。允许维护停用岗位关联，岗位配置不自动改变管理员身份、登录权限或后端权限码判定。
+
+| 方法 | 路径 | 用户岗位契约 |
+| --- | --- | --- |
+| POST | /api/users | 管理员创建用户及岗位子实体；返回完整详情 |
+| GET | /api/users/{id} | 整取用户资料及 positions 完整快照集合 |
+| PATCH | /api/users/{id} | 同事务更新资料与岗位集合；返回持久化后的根 version |
+| POST | /api/users/page | 保留现有摘要 items / total / page / size，不加载 positions |
+| DELETE | /api/users/{id}?version=0 | 保留当前账户及管理员保护；删除用户、刷新会话和关联，不删除岗位或权限定义 |
+
+编辑示例（positionIds 填写真实岗位 ULID）：
+
+```json
+{
+  "displayName": "业务人员",
+  "enabled": true,
+  "version": 0,
+  "positionIds": ["01ARZ3NDEKTSV4RRFFQ69G5FAV"]
+}
+```
+
+新增、详情、修改响应仍包含原来的 id、username、displayName、enabled、createdAt、version、phone、email，额外增加 positions 数组。数组每项包含上述七字段，不返回密码摘要、credentialVersion 或内部 positionsRevision。现有未使用 positionIds 的管理调用继续保持岗位关联不变。
+
+后端按岗位 ID 升序锁定并刷新岗位根，再生成 UserPositionSelection 快照并交给 User.replacePositions。保留关联的子实体 ID 不变，删除项通过 orphanRemoval 删除；新增、删除或快照实际变化推进内部 positions_revision，由 JPA 更新根 version；完全相同的集合和快照不推进岗位修订号。该内部字段不修改 credential_version，不因岗位配置撤销登录凭据。管理仓储通过单条 LEFT JOIN FETCH 完整加载用户及其岗位，认证 findById/findByUsername 保留轻量查询，DTO 转换在原 API 编排层完成。
+
+岗位和系统单独改名不会自动同步 UserPosition 快照；管理员重新提交 positionIds 时刷新四个字段。已有系统/权限名称同步仍只维护 Permission 与 Position 聚合，不扩散到用户。用户资料与岗位集合的任何保存失败共同回滚；根版本冲突返回 409。
+
+被任意用户引用的岗位删除返回 HTTP 409 和稳定业务码 POSITION_IN_USE，需先解除用户岗位关联。岗位删除在根写锁下检查引用，和用户配置的岗位读锁协调，数据库 FK RESTRICT 最终兜底；不级联删除用户。用户删除只级联其 UserPosition 子实体，保留岗位及权限。
+
+Flyway V12 增加 sys_users.positions_revision（默认 0）及 sys_user_positions，包含用户级联外键、岗位限制删除外键、用户与岗位联合唯一约束、系统快照成对空值检查、岗位引用索引和全部中文元数据注释。不回填或推测任何用户岗位。完整结构见 [用户 SQL 快照](docs/sql/system/users.sql)，截至 V12，仅供阅读，不直接执行到现有业务库。

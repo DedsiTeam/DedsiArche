@@ -1,7 +1,7 @@
 import { notify } from '@/lib/notify'
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle, Monitor } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle, Monitor, BriefcaseBusiness } from 'lucide-react'
 import { SidebarMenu, type SidebarMenuItem } from '@/components/SidebarMenu'
 import { Button } from '@/components/ui/button'
 
@@ -18,6 +18,7 @@ function Navigation({ collapsed }: { collapsed: boolean }) {
       { id: 'users', label: '用户管理', icon: Users, to: '/users' },
       { id: 'managed-systems', label: '系统管理', icon: Monitor, to: '/systems' },
       { id: 'permissions', label: '权限管理', icon: Settings2, to: '/permissions' },
+      { id: 'positions', label: '岗位管理', icon: BriefcaseBusiness, to: '/positions' },
     ] }]
     : []
   return <>

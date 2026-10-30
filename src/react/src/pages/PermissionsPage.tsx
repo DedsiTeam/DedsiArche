@@ -167,40 +167,33 @@ export function PermissionsPage() {
 
       <div className="overflow-hidden rounded-lg border bg-card">
         <div aria-busy={loading}>
-          <Table className="min-w-[1280px] table-fixed [&_th]:px-5 [&_td]:px-5">
-            <colgroup>
-              <col className="w-48" />
-              <col className="w-52" />
-              <col />
-              <col className="w-28" />
-              <col className="w-28" />
-              <col className="w-48" />
-              <col className="w-48" />
-            </colgroup>
+          <Table className="w-full table-auto [&_th]:whitespace-nowrap [&_th]:px-3 [&_td]:whitespace-nowrap [&_td]:px-3">
             <TableHeader className="bg-secondary">
               <TableRow className="hover:bg-transparent">
-                {['权限编码', '权限名称', '所属系统', '状态', '排序', '创建时间'].map((label) => (
+                {['ID', '权限编码', '权限名称', '所属系统编码', '所属系统名称', '状态', '排序', '创建时间'].map((label) => (
                   <TableHead key={label} className="h-11 text-xs font-semibold text-foreground">{label}</TableHead>
                 ))}
-                <TableHead className="h-11 text-right text-xs font-semibold text-foreground">操作</TableHead>
+                <TableHead className="table-action-column h-11 w-px text-right text-xs font-semibold text-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">正在加载权限…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-64 text-center text-muted-foreground">正在加载权限…</TableCell></TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-64 text-center">
+                  <TableCell colSpan={9} className="h-64 text-center">
                     加载失败。<Button variant="link" onClick={reload}>重试</Button>
                   </TableCell>
                 </TableRow>
               ) : !data?.items.length ? (
-                <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">暂无符合条件的权限</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-64 text-center text-muted-foreground">暂无符合条件的权限</TableCell></TableRow>
               ) : data.items.map((permission) => (
                 <TableRow key={permission.id} className="h-14 even:bg-muted/60 hover:bg-primary/[0.045]">
-                  <TableCell className="truncate font-medium" title={permission.code}>{permission.code}</TableCell>
-                  <TableCell className="truncate" title={permission.name}>{permission.name}</TableCell>
-                  <TableCell className="truncate text-muted-foreground" title={`${permission.systemName}（${permission.systemCode}）`}>{permission.systemName}（{permission.systemCode}）</TableCell>
+                  <TableCell className="font-mono text-xs leading-5 text-muted-foreground">{permission.id}</TableCell>
+                  <TableCell className="max-w-60 truncate font-medium" title={permission.code}>{permission.code}</TableCell>
+                  <TableCell className="max-w-60 truncate" title={permission.name}>{permission.name}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground">{permission.systemCode}</TableCell>
+                  <TableCell className="max-w-60 truncate text-muted-foreground" title={permission.systemName}>{permission.systemName}</TableCell>
                   <TableCell>
                     <span className={permission.enabled
                       ? 'inline-flex rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary'
@@ -212,8 +205,8 @@ export function PermissionsPage() {
                   <TableCell className="text-xs tabular-nums text-muted-foreground">
                     {permission.createdAt.replace('T', ' ').slice(0, 19)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-0.5">
+                  <TableCell className="table-action-column w-px">
+                    <div className="ml-auto flex w-max flex-nowrap items-center justify-end gap-0.5">
                       <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`详情 ${permission.name}`} onClick={() => setAction({ kind: 'detail', id: permission.id })}>详情</Button>
                       <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`编辑 ${permission.name}`} onClick={() => setAction({ kind: 'edit', id: permission.id })}>编辑</Button>
                       <Button size="sm" variant="ghost" className="px-2 text-muted-foreground" aria-label={`删除 ${permission.name}`} onClick={() => setAction({ kind: 'delete', id: permission.id })}>删除</Button>

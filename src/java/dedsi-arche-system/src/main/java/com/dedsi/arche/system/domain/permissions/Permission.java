@@ -5,6 +5,9 @@ import com.dedsi.arche.common.exception.BusinessException;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import com.dedsi.arche.system.domain.permissions.events.PermissionRenamedEvent;
 
 /** 权限定义聚合；系统编码和权限编码创建后不可变。 */
 @Entity
@@ -92,21 +95,42 @@ public class Permission {
     }
 
     /**
-     * 更新允许编辑的字段，保留系统编码和权限编码。
+     * 先校验全部输入再修改状态；仅已有名称实际变化时返回领域事件，创建和同名更新不产生事件。
+     * 调用方负责在当前事务中同步发布返回的事件。
      */
-    public void update(String systemName, String name, String description, boolean enabled, int sortOrder) {
-        this.systemName = required(systemName, "系统名称", 100);
-        this.name = required(name, "权限名称", 100);
+    public Optional<PermissionRenamedEvent> update(
+            String systemName, String name, String description, boolean enabled, int sortOrder
+    ) {
+        String nextSystemName = required(systemName, "系统名称", 100);
+        String nextName = required(name, "权限名称", 100);
         if (description != null && description.length() > 500) {
             throw new BusinessException("INVALID_PERMISSION", "权限说明最多 500 字符");
         }
         if (sortOrder < 0) {
             throw new BusinessException("INVALID_PERMISSION", "排序值不能小于零");
         }
+        String previousName = this.name;
+        this.systemName = nextSystemName;
+        this.name = nextName;
         this.description = description == null || description.isBlank() ? null : description.trim();
         this.enabled = enabled;
         this.sortOrder = sortOrder;
         this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        if (previousName != null && !previousName.equals(nextName)) {
+            return Optional.of(new PermissionRenamedEvent(id, previousName, nextName));
+        }
+        return Optional.empty();
+    }
+
+    /** 系统名称同步只修改所属系统名称和更新时间，不产生权限改名事件；同名处理幂等。 */
+    public void synchronizeSystemName(String name) {
+        String nextName = required(name, "系统名称", 100);
+        if (nextName.equals(systemName)) {
+            return;
+        }
+        this.systemName = nextName;
+        LocalDateTime current = LocalDateTime.now(ZoneId.of("Asia/Shanghai")).truncatedTo(ChronoUnit.MICROS);
+        this.updatedAt = !current.isAfter(updatedAt) ? updatedAt.plusNanos(1000) : current;
     }
 
     /**

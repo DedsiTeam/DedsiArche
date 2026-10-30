@@ -3,19 +3,32 @@
 构建并通过 Aspire 启动 Java、React（Bun）、PostgreSQL、Redis；使用 C:\Dockers 中已迁移的数据。
 #>
 $ErrorActionPreference = 'Stop'
+# PowerShell 7 在 macOS 上调用时，转交原生入口；Windows 兼容 PowerShell 5.1。
+if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
+    & /bin/bash (Join-Path $PSScriptRoot 'start.sh')
+    exit $LASTEXITCODE
+}
 $aspireRoot = $PSScriptRoot
 $javaRoot = [IO.Path]::GetFullPath((Join-Path $aspireRoot '../java'))
 $reactRoot = [IO.Path]::GetFullPath((Join-Path $aspireRoot '../react'))
 $project = Join-Path $aspireRoot 'DedsiArche.AppHost/DedsiArche.AppHost.csproj'
 $jar = Join-Path $javaRoot 'dedsi-arche-host/target/dedsi-arche-host-1.0.0-SNAPSHOT.jar'
+$configPath = Join-Path $aspireRoot 'DedsiArche.AppHost/appsettings.json'
+if (!(Test-Path -LiteralPath $configPath)) {
+    Copy-Item -LiteralPath (Join-Path $aspireRoot 'DedsiArche.AppHost/appsettings.example.json') -Destination $configPath
+    throw '已根据 Windows 模板创建 appsettings.json，请填写已有数据库、Redis 凭据和 JWT 密钥，恢复对应数据后重新运行。'
+}
+$config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+foreach ($key in @('postgres-user', 'postgres-password', 'redis-password', 'jwt-secret')) {
+    $value = [string]$config.Parameters.$key
+    if ([string]::IsNullOrWhiteSpace($value) -or $value.StartsWith('REPLACE_WITH_')) {
+        throw "请在 appsettings.json 中填写 Parameters:$key。"
+    }
+}
+Remove-Variable value
 foreach ($command in @('docker', 'dotnet', 'mvn.cmd', 'java', 'bun')) {
     if (!(Get-Command $command -ErrorAction SilentlyContinue)) { throw "缺少命令：$command" }
 }
-$configPath = Join-Path $aspireRoot 'DedsiArche.AppHost/appsettings.json'
-if (!(Test-Path -LiteralPath $configPath)) {
-    throw '缺少 AppHost/appsettings.json，请根据 appsettings.example.json 配置现有数据库凭据。'
-}
-$config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 foreach ($name in @('Postgres', 'Redis', 'Backend', 'Frontend', 'Dashboard', 'Otlp', 'ResourceService')) {
     $port = [int]$config.Ports.$name
     if ($port -lt 1 -or $port -gt 65535) { throw "请配置有效端口 Ports:$name" }

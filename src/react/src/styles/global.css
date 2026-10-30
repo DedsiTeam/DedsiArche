@@ -19,6 +19,18 @@
   --color-accent-foreground: #1E293B;
   --color-destructive: #1E293B;
   --color-error: #B91C1C;
+  /* 全局提示的状态色：文字、图标与浅色背景配套使用。 */
+  --color-success: #15803D;
+  --color-success-surface: #F0FDF4;
+  --color-success-border: #BBF7D0;
+  --color-warning: #92400E;
+  --color-warning-surface: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-error-surface: #FEF2F2;
+  --color-error-border: #FECACA;
+  --color-info: #1D4ED8;
+  --color-info-surface: #EFF6FF;
+  --color-info-border: #BFDBFE;
   --color-border: #E2E8F0;
   --color-input: #CBD5E1;
   --color-ring: #2563EB;
@@ -107,3 +119,23 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--color-ring); ou
 .order-tabs [data-slot="tabs-trigger"] { height: 100%; }
 .order-tabs [data-slot="tabs-trigger"][data-state="active"] { color: var(--color-primary); box-shadow: none; }
 .order-tabs [data-slot="tabs-trigger"][data-state="active"]::after { opacity: 1; background: var(--color-primary); bottom: 0; left: 16px; right: auto; width: 36px; }
+
+/* 列表操作固定在横向滚动容器右侧；使用不透明背景遮挡滚动经过的内容。 */
+.table-action-column {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background-color: var(--color-card);
+  box-shadow: -1px 0 0 var(--color-border);
+  transition: background-color 150ms;
+}
+thead .table-action-column {
+  z-index: 2;
+  background-color: var(--color-secondary);
+}
+tbody tr:nth-child(even) > .table-action-column {
+  background-color: color-mix(in srgb, var(--color-muted) 60%, var(--color-card));
+}
+tbody tr:hover > .table-action-column {
+  background-color: color-mix(in srgb, var(--color-primary) 4.5%, var(--color-card));
+}

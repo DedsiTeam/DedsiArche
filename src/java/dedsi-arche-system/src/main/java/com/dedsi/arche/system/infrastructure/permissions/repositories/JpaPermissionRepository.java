@@ -31,15 +31,18 @@ public class JpaPermissionRepository implements IPermissionRepository {
                 .getSingleResult() > 0;
     }
 
-    /** 批量更名同时递增版本，旧权限编辑请求不能覆盖系统名称变化。 */
+    /** 先按 ID 顺序锁定全部权限，再逐项刷新，避免事件同步使用一级缓存中的旧值。 */
     @Override
-    public void synchronizeSystemName(String systemCode, String systemName) {
-        em.createQuery("update Permission p set p.systemName = :name, p.updatedAt = :now,"
-                        + " p.version = p.version + 1 where p.systemCode = :code and p.systemName <> :name")
-                .setParameter("name", systemName)
-                .setParameter("now", java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")))
+    public java.util.List<Permission> lockAllBySystemCode(String systemCode) {
+        var permissions = em.createQuery(
+                        "select p from Permission p where p.systemCode = :code order by p.id", Permission.class)
                 .setParameter("code", systemCode)
-                .executeUpdate();
+                .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                .getResultList();
+        for (var permission : permissions) {
+            em.refresh(permission, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        }
+        return permissions;
     }
 
     /**
@@ -47,6 +50,21 @@ public class JpaPermissionRepository implements IPermissionRepository {
      */
     public Optional<Permission> findById(String id) {
         return delegate.findById(id);
+    }
+
+    /** 与权限更名写锁协调；刷新一级缓存，避免等待锁后复制旧名称。 */
+    @Override
+    public Optional<Permission> lockByIdForPosition(String id) {
+        var permission = delegate.findById(id);
+        if (permission.isPresent()) {
+            try {
+                em.refresh(permission.get(), jakarta.persistence.LockModeType.PESSIMISTIC_READ);
+            } catch (jakarta.persistence.EntityNotFoundException exception) {
+                // 普通读取与加锁之间权限已被删除，仍按所选权限不存在处理；锁异常继续向上传播。
+                return Optional.empty();
+            }
+        }
+        return permission;
     }
 
     /**

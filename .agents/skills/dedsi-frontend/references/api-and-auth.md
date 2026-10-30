@@ -7,12 +7,13 @@
 | 用途 | User 请求 | 关键数据 |
 | --- | --- | --- |
 | 分页 | POST /api/users/page | keyword、phone、email、enabled（全部时省略）、page 从 1、size=10 |
-| 新增 | POST /api/users | username、displayName、phone、email、password |
-| 编辑 | PATCH /api/users/{id} | displayName、phone、email、enabled、version |
-| 详情 | GET /api/users/{id} | 返回 IManagedUser |
+| 新增 | POST /api/users | username、displayName、phone、email、password、positionIds |
+| 编辑 | PATCH /api/users/{id} | displayName、phone、email、enabled、version、positionIds |
+| 详情 | GET /api/users/{id} | 返回 IManagedUserDetail（含 positions 快照） |
 | 删除 | DELETE /api/users/{id}?version=… | version 是 query 参数 |
 | 重置密码 | POST /api/users/{id}/reset-password | password、version |
 
+- `IManagedUserDetail` 扩展摘要并包含 `positions` 七字段关联快照；新增、编辑响应也使用该类型。编辑必须先加载详情，不能由列表推断岗位集合为空。表单整存 `positionIds`，不提交客户端名称快照。
 - `IManagedUser`：id/username/displayName/createdAt 为 string，phone/email 为 string|null，enabled boolean，version number。`IUserPage`：items/total/page/size。新领域按其后端字段建接口，不假设 enabled、用户名或电话号码必然存在。
 - services 使用已有 http，泛型声明响应并返回 data；页面不创建 Axios 实例，不重复拼 API 根路径。当前 http 超时 15 秒，根地址来自 VITE_API_BASE_URL；回退地址仅是现有配置事实，不复制硬编码端口到新服务。
 - JSON 字段大小写、枚举值、长度、数字范围、null/空串/省略、日期、分页最大值逐项对齐后端。多选/boolean/数字的 UI 值在明确边界转换；ID 不转数字。

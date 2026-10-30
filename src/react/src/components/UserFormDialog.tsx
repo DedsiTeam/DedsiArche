@@ -1,3 +1,4 @@
+import { UserPositionSelect } from '@/components/UserPositionSelect'
 import { useForm } from 'react-hook-form'
 import { isAxiosError } from 'axios'
 import { Form, type FormFieldConfig } from '@/components/ui/form'
@@ -7,7 +8,7 @@ import { PasswordGeneratorInput } from '@/components/ui/password-generator-input
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { validateDisplayName, validateUsername, validatePasswordChange, validatePhone, validateEmail } from '@/lib/user-validation'
 import { userError } from '@/lib/api-error'
-import { createUser, editUser, type IManagedUser } from '@/services/users'
+import { createUser, editUser, type IManagedUserDetail } from '@/services/users'
 
 type UserFormValues = {
   username: string
@@ -18,10 +19,11 @@ type UserFormValues = {
   confirmPassword: string
   enabled: boolean
   confirmed: boolean
+  positionIds: string[]
 }
 
 export function UserFormDialog({ user, currentUserId, onClose, onSuccess }: {
-  user: IManagedUser | null
+  user: IManagedUserDetail | null
   currentUserId?: string
   onClose: () => void
   onSuccess: (message: string) => void
@@ -29,11 +31,12 @@ export function UserFormDialog({ user, currentUserId, onClose, onSuccess }: {
   const form = useForm<UserFormValues>({
     mode: 'onBlur', reValidateMode: 'onChange',
     defaultValues: {
+      positionIds: user?.positions.map((item) => item.positionId) ?? [],
       username: user?.username ?? '', displayName: user?.displayName ?? '',
       phone: user?.phone ?? '', email: user?.email ?? '', password: '', confirmPassword: '', enabled: user?.enabled ?? true, confirmed: false,
     },
   })
-  const saving = form.formState.isSubmitting
+  const saving = form.formState.isSubmitting || form.formState.isValidating
   const fields: FormFieldConfig<UserFormValues>[] = [
     { name: 'username', label: '账号', readOnly: Boolean(user), required: true,
       inputProps: { autoComplete: 'off' },
@@ -59,15 +62,42 @@ export function UserFormDialog({ user, currentUserId, onClose, onSuccess }: {
       render: ({ field, controlProps }) => <Select {...controlProps} clearable={false} ref={field.ref} name={field.name} value={String(field.value)} onBlur={field.onBlur}
         onValueChange={(value) => { field.onChange(value === 'true'); form.setValue('confirmed', false) }} className="w-full"
         options={[{ value: 'true', label: '已启用' }, { value: 'false', label: '已停用' }]} /> },
+    {
+      name: 'positionIds', label: '用户岗位',
+      className: 'flex min-h-0 flex-1 flex-col space-y-0 gap-3 [&>label]:font-semibold',
+      render: ({ field, controlProps }) => (
+        <UserPositionSelect
+          {...controlProps}
+          value={field.value as string[]}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          inputRef={field.ref}
+          initialPositions={user?.positions ?? []}
+        />
+      ),
+    },
     { name: 'confirmed', label: '确认停用该用户，并撤销其刷新会话。', kind: 'checkbox',
       visible: (values) => Boolean(user?.enabled && !values.enabled), className: 'rounded-lg bg-secondary p-3' },
   ]
   return <Dialog open onOpenChange={(open) => { if (!open && !saving) onClose() }}>
-    <DialogContent aria-describedby={undefined} showCloseButton={!saving}>
-      <DialogHeader>
+    <DialogContent className="flex h-[82vh] max-h-[760px] w-[calc(100vw-48px)] max-w-[1280px] flex-col gap-5 overflow-hidden bg-card" aria-describedby={undefined} showCloseButton={!saving}>
+      <DialogHeader className="shrink-0 border-b pb-4">
         <DialogTitle>{user ? '编辑用户' : '新增用户'}</DialogTitle>
       </DialogHeader>
-      <Form form={form} fields={fields} aria-label={user ? '编辑用户' : '新增用户'}
+      <Form form={form} fields={fields.map((field) => ({ ...field, disabled: saving || field.disabled }))} aria-label={user ? '编辑用户' : '新增用户'}
+        className="flex min-h-0 flex-1 flex-col space-y-0 gap-4"
+        fieldsClassName="min-h-0 flex-1 space-y-0 overflow-hidden"
+        renderFields={(items) => (
+          <div className="grid h-full min-h-0 grid-cols-[minmax(260px,0.85fr)_minmax(0,2fr)] gap-5">
+            <section aria-label="基本信息" className="min-w-0 space-y-4 overflow-y-auto overscroll-contain py-1 pr-4">
+              <h2 className="text-sm font-semibold">基本信息</h2>
+              {items.filter((item) => item.name !== 'positionIds').map((item) => item.node)}
+            </section>
+            <section aria-label="用户岗位" className="flex min-h-0 min-w-0 flex-col border-l py-1 pl-5">
+              {items.filter((item) => item.name === 'positionIds').map((item) => item.node)}
+            </section>
+          </div>
+        )}
         validate={(values) => {
           if (user?.id === currentUserId && !values.enabled) return [{ name: 'enabled', message: '不能停用当前登录账户。' }]
           if (user?.enabled && !values.enabled && !values.confirmed) return [{ name: 'confirmed', message: '请确认停用此用户。' }]
@@ -75,15 +105,31 @@ export function UserFormDialog({ user, currentUserId, onClose, onSuccess }: {
         }}
         mapError={(cause) => {
           const status = isAxiosError(cause) ? cause.response?.status : undefined
-          if (!user && status === 409) return [{ name: 'username', message: '账号已存在，请换一个账号。' }]
-          return [{ message: status === 409 && user ? '资料已被其他操作修改。请关闭此窗口、刷新列表后重试。' : status === 404 ? '该用户不存在，请刷新列表。' : userError(cause) }]
+          const code = isAxiosError(cause) ? cause.response?.data?.code : undefined
+          if (code === 'USER_POSITION_NOT_FOUND') return [{ name: 'positionIds', message: '所选岗位已不存在，请移除该项或重新选择后保存。' }]
+          if (code === 'DUPLICATE_USER_POSITION' || code === 'INVALID_USER_POSITION') return [{ name: 'positionIds', message: '岗位选择无效，请检查后重新选择。' }]
+          if (!user && status === 409 && code === 'USERNAME_EXISTS') return [{ name: 'username', message: '账号已存在，请换一个账号。' }]
+          return [{ message: status === 409 ? '用户资料或关联岗位已变化，请关闭窗口并重新读取后提交。' : status === 404 ? '该用户不存在，请刷新列表。' : userError(cause) }]
         }}
         onSubmit={async (values) => {
-          if (user) await editUser(user.id, { displayName: values.displayName.trim(), phone: values.phone.trim(), email: values.email.trim(), enabled: values.enabled, version: user.version })
-          else await createUser({ username: values.username.trim(), displayName: values.displayName.trim(), phone: values.phone.trim(), email: values.email.trim(), password: values.password })
+          const valuesToSave = {
+            displayName: values.displayName.trim(),
+            phone: values.phone.trim(),
+            email: values.email.trim(),
+            positionIds: values.positionIds,
+          }
+          if (user) {
+            await editUser(user.id, {
+              ...valuesToSave, enabled: values.enabled, version: user.version,
+            })
+          } else {
+            await createUser({
+              ...valuesToSave, username: values.username.trim(), password: values.password,
+            })
+          }
           onSuccess(user ? '用户资料已更新。' : '用户已创建，可使用设置的密码登录。')
         }}>
-        <div className="flex gap-3">
+        <div className="flex shrink-0 gap-3 border-t pt-4">
           <Button type="submit" disabled={saving}>{saving ? '正在保存…' : user ? '保存修改' : '创建用户'}</Button>
           <Button type="button" variant="outline" disabled={saving} onClick={onClose}>取消</Button>
         </div>

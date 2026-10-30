@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
-type Message = { id: number; type: 'success' | 'error' | 'info'; text: string }
+export type MessageType = 'success' | 'warning' | 'error' | 'info'
+
+type Message = { id: number; type: MessageType; text: string }
 let messages: Message[] = []
 let nextId = 0
 const listeners = new Set<() => void>()
@@ -12,6 +14,7 @@ function show(type: Message['type'], text: string) {
 }
 export const notify = {
   success: (text: string) => show('success', text),
+  warning: (text: string) => show('warning', text),
   error: (text: string) => show('error', text),
   info: (text: string) => show('info', text),
   dismiss: (id: number) => { messages = messages.filter((item) => item.id !== id); emit() },

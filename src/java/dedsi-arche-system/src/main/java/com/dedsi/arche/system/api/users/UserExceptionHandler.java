@@ -21,7 +21,7 @@ public class UserExceptionHandler {
     ProblemDetail business(BusinessException e) {
         var result =
                 ProblemDetail.forStatusAndDetail(
-                        e.getCode().equals("USERNAME_EXISTS")
+                        (e.getCode().equals("USERNAME_EXISTS") || e.getCode().equals("POSITION_IN_USE"))
                                 ? HttpStatus.CONFLICT
                                 : HttpStatus.BAD_REQUEST,
                         e.getMessage());

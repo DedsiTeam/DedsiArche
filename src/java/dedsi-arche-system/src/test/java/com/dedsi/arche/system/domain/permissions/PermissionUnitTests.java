@@ -136,6 +136,59 @@ class PermissionUnitTests {
         assertThat(created.getDescription()).isNull();
     }
 
+    @Test
+    @DisplayName("仅名称实际改变时产生包含前后名称的纯领域事件")
+    void actualRenameProducesDomainEvent() {
+        Permission permission = newPermission();
+        assertThat(permission.update("系统", " 查看 ", "说明变化", false, 2)).isEmpty();
+        var event = permission.update("系统", " 新名称 ", "说明", true, 3).orElseThrow();
+        assertThat(event.permissionId()).isEqualTo(permission.getId());
+        assertThat(event.previousName()).isEqualTo("查看");
+        assertThat(event.name()).isEqualTo("新名称");
+        assertThat(permission.getName()).isEqualTo(event.name());
+        assertThat(permission.update("另一系统名称", "新名称", null, false, 0)).isEmpty();
+        assertThat(event.name()).isEqualTo("新名称");
+    }
+
+    @Test
+    @DisplayName("失败更新不修改名称或其他字段，后续事件仍使用原始名称")
+    void failedUpdateDoesNotMutateOrProduceRename() {
+        Permission permission = newPermission();
+        LocalDateTime updatedAt = permission.getUpdatedAt();
+        assertInvalid(() -> permission.update("新系统", "新名称", "文".repeat(501), false, 1));
+        assertInvalid(() -> permission.update("新系统", "新名称", null, false, -1));
+        assertThat(permission.getSystemName()).isEqualTo("系统");
+        assertThat(permission.getName()).isEqualTo("查看");
+        assertThat(permission.getDescription()).isEqualTo("原说明");
+        assertThat(permission.isEnabled()).isTrue();
+        assertThat(permission.getSortOrder()).isZero();
+        assertThat(permission.getUpdatedAt()).isEqualTo(updatedAt);
+        var event = permission.update("系统", "成功更名", null, true, 0).orElseThrow();
+        assertThat(event.previousName()).isEqualTo("查看");
+    }
+
+    @Test
+    @DisplayName("系统名称同步只改系统名称且重复处理幂等，不影响权限名称")
+    void systemNameSynchronizationIsIdempotent() {
+        var permission = newPermission();
+        var createdAt = permission.getCreatedAt();
+        permission.synchronizeSystemName(" 新系统 ");
+        assertThat(permission.getSystemName()).isEqualTo("新系统");
+        assertThat(permission.getSystemCode()).isEqualTo("arche");
+        assertThat(permission.getName()).isEqualTo("查看");
+        assertThat(permission.getCode()).isEqualTo("user:read");
+        assertThat(permission.getDescription()).isEqualTo("原说明");
+        assertThat(permission.getCreatedAt()).isEqualTo(createdAt);
+        var updatedAt = permission.getUpdatedAt();
+        permission.synchronizeSystemName("新系统");
+        assertThat(permission.getUpdatedAt()).isEqualTo(updatedAt);
+        assertInvalid(() -> permission.synchronizeSystemName(" "));
+        assertInvalid(() -> permission.synchronizeSystemName("文".repeat(101)));
+        assertThat(permission.getSystemName()).isEqualTo("新系统");
+        assertThat(permission.getUpdatedAt()).isEqualTo(updatedAt);
+        assertThat(permission.update("新系统", "查看", "原说明", true, 0)).isEmpty();
+    }
+
     /** 仅在内存中创建测试权限，不写入任何数据库。 */
     private Permission newPermission() {
         return Permission.create("arche", "系统", "user:read", "查看", "原说明", true, 0);

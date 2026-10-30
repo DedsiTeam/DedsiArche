@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.persistence.LockModeType;
+import org.springframework.context.ApplicationEventPublisher;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +29,8 @@ public class PermissionController {
     private final IPermissionQuery query;
     private final com.dedsi.arche.system.domain.systems.IManagedSystemRepository systems;
     private final jakarta.persistence.EntityManager em;
+    /* 在现有写事务中同步发布纯领域事件。 */
+    private final ApplicationEventPublisher events;
 
     /**
      * 初始化所需依赖。
@@ -35,12 +39,14 @@ public class PermissionController {
             IPermissionRepository permissions,
             IPermissionQuery query,
             com.dedsi.arche.system.domain.systems.IManagedSystemRepository systems,
-            jakarta.persistence.EntityManager em
+            jakarta.persistence.EntityManager em,
+            ApplicationEventPublisher events
     ) {
         this.permissions = permissions;
         this.query = query;
         this.systems = systems;
         this.em = em;
+        this.events = events;
     }
 
     /**
@@ -91,20 +97,20 @@ public class PermissionController {
      * 更新允许编辑的字段，保留系统编码和权限编码。
      */
     @PutMapping("/{id}")
-    @Operation(summary = "更新权限", description = "提交全部可编辑字段及 version；description 为 null 或空串时清除。enabled 用于启停。")
+    @Operation(summary = "更新权限", description = "提交全部可编辑字段及 version；description 为 null 或空串时清除。权限名称实际变化时，同事务同步岗位引用名称并推进岗位版本；enabled 用于启停。")
     @Transactional
     public PermissionDto update(@PathVariable String id,
             @Valid @RequestBody UpdatePermissionRequest request) {
         var permission = find(id);
         var system = lockSystem(permission.getSystemCode());
-        // 等待系统锁期间可能发生更名；重新读取权限版本后再校验。
-        em.refresh(permission);
+        // 固定顺序为系统锁、权限写锁、岗位写入；刷新避免等待锁后仍使用旧缓存。
+        em.refresh(permission, LockModeType.PESSIMISTIC_WRITE);
         checkVersion(permission, request.version());
         permission.update(system.getName(),
                 request.name(),
                 request.description(),
                 request.enabled(),
-                request.sortOrder());
+                request.sortOrder()).ifPresent(events::publishEvent);
         permissions.flush();
         return PermissionDto.from(permission);
     }

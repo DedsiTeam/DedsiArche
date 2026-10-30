@@ -158,40 +158,32 @@ export function ManagedSystemsPage() {
 
       <div className="overflow-hidden rounded-lg border bg-card">
         <div aria-busy={loading}>
-          <Table className="min-w-[1280px] table-fixed [&_th]:px-5 [&_td]:px-5">
-            <colgroup>
-              <col className="w-48" />
-              <col className="w-52" />
-              <col />
-              <col className="w-28" />
-              <col className="w-28" />
-              <col className="w-48" />
-              <col className="w-48" />
-            </colgroup>
+          <Table className="w-full table-auto [&_th]:whitespace-nowrap [&_th]:px-3 [&_td]:whitespace-nowrap [&_td]:px-3">
             <TableHeader className="bg-secondary">
               <TableRow className="hover:bg-transparent">
-                {['系统编码', '系统名称', '入口地址', '状态', '排序', '创建时间'].map((label) => (
+                {['ID', '系统编码', '系统名称', '入口地址', '状态', '排序', '创建时间'].map((label) => (
                   <TableHead key={label} className="h-11 text-xs font-semibold text-foreground">{label}</TableHead>
                 ))}
-                <TableHead className="h-11 text-right text-xs font-semibold text-foreground">操作</TableHead>
+                <TableHead className="table-action-column h-11 w-px text-right text-xs font-semibold text-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">正在加载系统…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="h-64 text-center text-muted-foreground">正在加载系统…</TableCell></TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-64 text-center">
+                  <TableCell colSpan={8} className="h-64 text-center">
                     加载失败。<Button variant="link" onClick={reload}>重试</Button>
                   </TableCell>
                 </TableRow>
               ) : !data?.items.length ? (
-                <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">暂无符合条件的系统</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="h-64 text-center text-muted-foreground">暂无符合条件的系统</TableCell></TableRow>
               ) : data.items.map((system) => (
                 <TableRow key={system.id} className="h-14 even:bg-muted/60 hover:bg-primary/[0.045]">
-                  <TableCell className="truncate font-medium" title={system.code}>{system.code}</TableCell>
-                  <TableCell className="truncate" title={system.name}>{system.name}</TableCell>
-                  <TableCell className="truncate text-muted-foreground" title={system.entryUrl ?? undefined}>{system.entryUrl || '—'}</TableCell>
+                  <TableCell className="font-mono text-xs leading-5 text-muted-foreground">{system.id}</TableCell>
+                  <TableCell className="font-mono font-medium">{system.code}</TableCell>
+                  <TableCell className="max-w-60 truncate" title={system.name}>{system.name}</TableCell>
+                  <TableCell className="max-w-60 truncate text-muted-foreground" title={system.entryUrl ?? undefined}>{system.entryUrl || '—'}</TableCell>
                   <TableCell>
                     <span className={system.status === 'NORMAL'
                       ? 'inline-flex rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary'
@@ -203,8 +195,8 @@ export function ManagedSystemsPage() {
                   <TableCell className="text-xs tabular-nums text-muted-foreground">
                     {system.createdAt.replace('T', ' ').slice(0, 19)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-0.5">
+                  <TableCell className="table-action-column w-px">
+                    <div className="ml-auto flex w-max flex-nowrap items-center justify-end gap-0.5">
                       <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`详情 ${system.name}`} onClick={() => setAction({ kind: 'detail', id: system.id })}>详情</Button>
                       <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`编辑 ${system.name}`} onClick={() => setAction({ kind: 'edit', id: system.id })}>编辑</Button>
                       <Button size="sm" variant="ghost" className="px-2 text-muted-foreground" aria-label={`删除 ${system.name}`} onClick={() => setAction({ kind: 'delete', id: system.id })}>删除</Button>

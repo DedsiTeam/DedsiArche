@@ -30,6 +30,22 @@ public class JpaUserRepository implements IUserRepository {
         return delegate.findById(id);
     }
 
+    /** 单条查询读取管理用途的完整聚合；认证继续使用原轻量读取入口。 */
+    @Override
+    public Optional<User> findAggregateById(UUID id) {
+        return delegate.findAggregateById(id);
+    }
+
+    @Override
+    public boolean existsByPositionId(String positionId) {
+        return delegate.existsByPositionId(positionId);
+    }
+
+    @Override
+    public void flush() {
+        delegate.flush();
+    }
+
     /**
      * 按规范化后的账号查找用户，不存在时返回空结果。
      */

@@ -8,6 +8,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 用户聚合根。API 不直接序列化此实体，避免泄漏密码哈希。
@@ -72,6 +79,15 @@ public class User {
     @Version
     private Long version;
 
+    /* 岗位集合或快照实际变化时递增，使子实体变化触发用户根乐观锁；不用于认证。 */
+    @Column(name = "positions_revision", nullable = false)
+    private long positionsRevision;
+
+    /* 用户拥有的岗位关联；只级联关联子实体，不改变独立岗位或权限定义。 */
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("positionCode ASC, id ASC")
+    private List<UserPosition> positions = new ArrayList<>();
+
     /**
      * 供 JPA 实例化实体使用。
      */
@@ -101,6 +117,54 @@ public class User {
      */
     public static String normalizeUsername(String value) {
         return value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 整体替换岗位集合并刷新快照；null 保持，空集合清空。
+     * 所有输入先校验，保留关联的标识不变，失败时不留下部分增删或快照修改。
+     */
+    public void replacePositions(List<UserPositionSelection> selected) {
+        if (selected == null) {
+            return;
+        }
+        Set<String> selectedIds = new HashSet<>();
+        for (UserPositionSelection selection : selected) {
+            if (selection == null) {
+                throw new BusinessException("INVALID_USER_POSITION", "用户岗位不能为空");
+            }
+            if (!selectedIds.add(selection.positionId())) {
+                throw new BusinessException("DUPLICATE_USER_POSITION", "同一用户不能重复关联岗位");
+            }
+        }
+
+        Map<String, UserPosition> existing = new HashMap<>();
+        for (UserPosition item : positions) {
+            existing.put(item.getPositionId(), item);
+        }
+        boolean changed = false;
+        for (UserPositionSelection selection : selected) {
+            UserPosition item = existing.get(selection.positionId());
+            if (item == null) {
+                positions.add(UserPosition.create(this, selection));
+                changed = true;
+            } else {
+                changed |= item.refreshSnapshot(selection);
+            }
+        }
+        changed |= positions.removeIf(item -> !selectedIds.contains(item.getPositionId()));
+        if (changed) {
+            positionsRevision++;
+        }
+    }
+
+    /** 岗位关联只读视图，不能绕过用户聚合增删子实体。 */
+    public List<UserPosition> getPositions() {
+        return Collections.unmodifiableList(positions);
+    }
+
+    /** 内部岗位变更计数；不作为 API 版本、凭据版本或鉴权依据。 */
+    public long getPositionsRevision() {
+        return positionsRevision;
     }
 
     /**

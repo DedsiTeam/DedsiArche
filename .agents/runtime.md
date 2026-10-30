@@ -5,7 +5,7 @@
 - Java 主入口固定默认时区 Asia/Shanghai，业务代码显式获取北京时间；数据库应用连接初始化为 Asia/Shanghai，应用日志也使用北京时间。两种启动方式都遵循相同规则，不依赖机器默认时区。
 ### Aspire 统一启动
 
-- 仓库根目录运行 .\src\aspire\start.ps1，统一启动 PostgreSQL、Redis、Java 和 React（Bun）。
+- Windows 在仓库根目录运行 `.\src\aspire\start.ps1`；macOS 运行 `./src/aspire/start.sh`（系统 Bash，无需 PowerShell）。统一启动 PostgreSQL、Redis、Java 和 React（Bun）；Maven 分别使用 `mvn.cmd` / `mvn`。缺少 `appsettings.json` 时复制对应系统模板并停止，填写已有凭据后再启动；不覆盖现有配置。Mac 入口发现应用端口占用时要求手动停止，不自动结束进程。
 - 配置来源：src/aspire/DedsiArche.AppHost/appsettings.json，示例为 appsettings.example.json。实际配置包含密码，不能提交或完整打印。
 - Parameters 保存用户名、密码、JWT 等参数值；AddParameter 在代码中声明并引用参数。
 - Ports 集中定义基础设施、应用、Dashboard、OTLP 和资源服务端口。连接地址、启动参数、端口检查统一引用，不新增重复常量。
@@ -26,6 +26,7 @@
 - 当前 PostgreSQL：C:\Dockers\PostgreSql\DedsiArcheDB，容器内 /var/lib/postgresql。
 - 当前 Redis：C:\Dockers\Redis\DedsiArche，容器内 /data，保留 AOF。
 - 上述路径以实际 appsettings.json 为准；检查所需已有数据文件后才允许启动，缺失则报告，不能初始化空目录掩盖错误。
+- Windows 模板为 `appsettings.example.json`；当前 Mac 模板为 `appsettings.mac.example.json`，数据目录分别为 `/Users/cohen/Cohen/Dockers/PostgreSql/DedsiArcheDB` 和 `/Users/cohen/Cohen/Dockers/Redis/DedsiArche`。模板需复制为 `appsettings.json` 并填写已有凭据后使用，不自动加载，也不改变已有数据文件检查。
 - 未经明确授权，不删除数据目录、迁移备份或旧数据卷，不执行 docker compose down -v、docker volume prune 等清理操作。授权某一个旧副本清理不代表授权全局清理。
 - 仓库已移除 Compose 配置，统一编排使用 Aspire，不恢复第二套默认依赖编排。
 - 迁移须先停止写入、保留原数据及备份，再复制并核对完整性；旧副本不包含迁移后的新增写入。

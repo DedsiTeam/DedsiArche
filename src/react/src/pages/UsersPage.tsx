@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { refreshProfile, useSession } from '@/services/auth'
 import { listUsers, type IManagedUser, type IUserPage } from '@/services/users'
+import { UserEditDialog } from '@/components/UserEditDialog'
 import { UserFormDialog } from '@/components/UserFormDialog'
 import { userError } from '@/lib/api-error'
 import { UserActionDialog, type UserAction } from '@/components/UserActionDialog'
@@ -92,31 +93,32 @@ export function UsersPage() {
 
     <div className="overflow-hidden rounded-lg border bg-card">
       <div aria-busy={loading}>
-        <Table className="min-w-[1320px] table-fixed [&_th]:px-5 [&_td]:px-5">
-          <colgroup><col className="w-[20%]" /><col /><col className="w-40" /><col className="w-56" /><col className="w-28" /><col className="w-48" /><col className="w-64" /></colgroup>
+        <Table className="w-full table-auto [&_th]:whitespace-nowrap [&_th]:px-3 [&_td]:whitespace-nowrap [&_td]:px-3">
           <TableHeader className="bg-secondary">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="h-11 text-xs font-semibold text-foreground">ID</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">账号</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">姓名</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">手机号</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">邮箱</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">状态</TableHead>
               <TableHead className="h-11 text-xs font-semibold text-foreground">创建时间</TableHead>
-              <TableHead className="h-11 text-right text-xs font-semibold text-foreground">操作</TableHead>
+              <TableHead className="table-action-column h-11 w-px text-right text-xs font-semibold text-foreground">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">正在加载用户…</TableCell></TableRow>
-              : error ? <TableRow><TableCell colSpan={7} className="h-64 text-center">加载失败。<Button variant="link" onClick={reload}>重试</Button></TableCell></TableRow>
-              : !data?.items.length ? <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground">暂无符合条件的用户</TableCell></TableRow>
+            {loading ? <TableRow><TableCell colSpan={8} className="h-64 text-center text-muted-foreground">正在加载用户…</TableCell></TableRow>
+              : error ? <TableRow><TableCell colSpan={8} className="h-64 text-center">加载失败。<Button variant="link" onClick={reload}>重试</Button></TableCell></TableRow>
+              : !data?.items.length ? <TableRow><TableCell colSpan={8} className="h-64 text-center text-muted-foreground">暂无符合条件的用户</TableCell></TableRow>
               : data.items.map((user) => <TableRow key={user.id} className="h-14 even:bg-muted/60 hover:bg-primary/[0.045]">
-                <TableCell><div className="flex min-w-0 items-center gap-2"><span className="truncate font-medium" title={user.username}>{user.username}</span>{user.id === session?.user.id && <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">本人</span>}</div></TableCell>
-                <TableCell className="truncate" title={user.displayName}>{user.displayName}</TableCell>
-                <TableCell className="truncate tabular-nums" title={user.phone ?? undefined}>{user.phone || '—'}</TableCell>
-                <TableCell className="truncate" title={user.email ?? undefined}>{user.email || '—'}</TableCell>
+                <TableCell className="font-mono text-xs leading-5 text-muted-foreground">{user.id}</TableCell>
+                <TableCell><div className="flex min-w-0 max-w-60 flex-nowrap items-center gap-1"><span className="truncate font-medium" title={user.username}>{user.username}</span>{user.id === session?.user.id && <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">本人</span>}</div></TableCell>
+                <TableCell className="max-w-60 truncate" title={user.displayName}>{user.displayName}</TableCell>
+                <TableCell className="max-w-60 truncate tabular-nums" title={user.phone ?? undefined}>{user.phone || '—'}</TableCell>
+                <TableCell className="max-w-60 truncate" title={user.email ?? undefined}>{user.email || '—'}</TableCell>
                 <TableCell><span className={user.enabled ? 'inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary' : 'inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground'}><span aria-hidden="true" className={user.enabled ? 'size-1.5 rounded-full bg-primary' : 'size-1.5 rounded-full bg-black/30'} />{user.enabled ? '已启用' : '已停用'}</span></TableCell>
                 <TableCell className="text-xs tabular-nums text-muted-foreground">{user.createdAt.replace('T', ' ').slice(0, 19)}</TableCell>
-                <TableCell><div className="flex items-center justify-end gap-0.5">
+                <TableCell className="table-action-column w-px"><div className="ml-auto flex w-max flex-nowrap items-center justify-end gap-0.5">
                   <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`详情 ${user.username}`} onClick={() => setAction({ kind: 'detail', user })}>详情</Button>
                   <Button size="sm" variant="ghost" className="px-2 text-primary" aria-label={`编辑 ${user.username}`} onClick={() => show(user)}>编辑</Button>
                   <Button size="sm" variant="ghost" className="px-2" aria-label={`重置密码 ${user.username}`} onClick={() => setAction({ kind: 'reset', user })}>重置密码</Button>
@@ -139,13 +141,23 @@ export function UsersPage() {
       </footer>
     </div>
     {action && <UserActionDialog action={action} onClose={() => setAction(null)} onSuccess={(text) => { notify.success(text); reload() }} />}
-    {open && <UserFormDialog user={editing} currentUserId={session?.user.id} onClose={() => setOpen(false)} onSuccess={(message) => {
-      setOpen(false)
-      notify.success(message)
-      reload()
-      if (editing?.id === session?.user.id) {
-        void refreshProfile().catch((cause: unknown) => notify.error(userError(cause)))
-      }
-    }} />}
+    {open && (editing ? (
+      <UserEditDialog key={editing.id} id={editing.id} currentUserId={session?.user.id}
+        onClose={() => setOpen(false)} onSuccess={(message) => {
+          setOpen(false)
+          notify.success(message)
+          reload()
+          if (editing.id === session?.user.id) {
+            void refreshProfile().catch((cause: unknown) => notify.error(userError(cause)))
+          }
+        }} />
+    ) : (
+      <UserFormDialog user={null} currentUserId={session?.user.id}
+        onClose={() => setOpen(false)} onSuccess={(message) => {
+          setOpen(false)
+          notify.success(message)
+          reload()
+        }} />
+    ))}
   </section>
 }

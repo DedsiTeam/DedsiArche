@@ -149,6 +149,22 @@ class ManagedSystemUnitTests {
         assertThat(system.getUpdatedAt()).isEqualTo(updatedAt);
     }
 
+    @Test
+    @DisplayName("系统仅在规范化名称实际改变时返回改名领域事件")
+    void renameEventContainsStableSystemCodeAndNames() {
+        var system = newSystem();
+        assertThat(system.update(" 系统 ", "其他说明", null, SystemStatus.NOT_LAUNCHED, 1)).isEmpty();
+        var event = system.update(" 新系统 ", null, null, SystemStatus.NOT_LAUNCHED, 0).orElseThrow();
+        assertThat(event.systemCode()).isEqualTo("arche");
+        assertThat(event.previousName()).isEqualTo("系统");
+        assertThat(event.name()).isEqualTo("新系统");
+        assertThat(system.update("新系统", null, null, SystemStatus.NOT_LAUNCHED, 0)).isEmpty();
+        assertError(() -> system.update("失败名称", null, null, SystemStatus.NORMAL, 0), "SYSTEM_ENTRY_REQUIRED");
+        assertThat(system.getName()).isEqualTo("新系统");
+        assertThat(system.update("再次更名", null, null, SystemStatus.NOT_LAUNCHED, 0)
+                .orElseThrow().previousName()).isEqualTo("新系统");
+    }
+
     /** 创建内存中的聚合，不创建真实业务数据。 */
     private ManagedSystem newSystem() {
         return ManagedSystem.create("arche", "系统", "原说明", null, SystemStatus.NOT_LAUNCHED, 0);
