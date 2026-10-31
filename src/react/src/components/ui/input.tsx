@@ -55,8 +55,8 @@ function Input({ className, type = "text", clearable = true, onClear, clearLabel
       onChange={(event) => { setLocalValue(event.target.value); onChange?.(event) }}
       className={cn(
         "peer h-9 w-full min-w-0 rounded-md border border-input bg-card px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        "disabled:bg-muted read-only:bg-muted aria-invalid:border-error aria-invalid:ring-error/20 dark:aria-invalid:ring-error/40",
+        "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/10",
+        "disabled:bg-muted read-only:bg-muted aria-invalid:border-error aria-invalid:focus-visible:border-error aria-invalid:focus-visible:ring-error/10 aria-invalid:ring-error/10",
         className,
         supportsClear && (hasEndAction ? "pr-24" : "pr-10")
       )}
@@ -64,12 +64,12 @@ function Input({ className, type = "text", clearable = true, onClear, clearLabel
   )
   if (!supportsClear) return input
   return (
-    <div className={cn("relative w-full min-w-0", containerClassName)}>
+    <div className={cn("group/clear relative w-full min-w-0", containerClassName)}>
       {input}
       {canClear && <button
         type="button"
         aria-label={clearLabel ?? `清空${props['aria-label'] ?? props.placeholder ?? '内容'}`}
-        className={cn("absolute top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring peer-disabled:hidden", hasEndAction ? "right-12" : "right-1")}
+        className={cn("pointer-events-none opacity-0 group-hover/clear:pointer-events-auto group-hover/clear:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 absolute top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring peer-disabled:hidden", hasEndAction ? "right-12" : "right-1")}
         onMouseDown={(event) => event.preventDefault()}
         onClick={clear}
       ><X aria-hidden="true" className="size-4" /></button>}

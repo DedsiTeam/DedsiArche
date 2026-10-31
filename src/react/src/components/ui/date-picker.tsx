@@ -63,11 +63,11 @@ export function DatePicker({ value, onValueChange, onBlur, min, max, placeholder
     else return
     event.preventDefault(); move(next, true)
   }
-  return <div ref={wrapper} className="relative w-full">
+  return <div ref={wrapper} className="group/clear relative w-full">
     {name && <input type="hidden" name={name} value={value} disabled={disabled} />}
     <Popover.Root open={open && !disabled && !readOnly} onOpenChange={(next) => { if (!disabled && !readOnly) { if (next) setCursor(initial); setOpen(next) } }}>
       <Popover.Trigger asChild><button {...props} type="button" disabled={disabled} aria-readonly={readOnly} onBlur={() => { if (!open) onBlur?.() }}
-        className={cn('flex h-10 w-full items-center rounded-lg border border-input bg-card pl-3 pr-20 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:bg-muted aria-readonly:bg-muted aria-invalid:border-error disabled:cursor-not-allowed disabled:opacity-50', className)}>
+        className={cn('flex h-10 w-full items-center rounded-lg border border-input bg-card pl-3 pr-20 text-left text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/10 disabled:bg-muted aria-readonly:bg-muted aria-invalid:border-error aria-invalid:focus-visible:border-error aria-invalid:focus-visible:ring-error/10 disabled:cursor-not-allowed disabled:opacity-50', className)}>
         <span className={cn('truncate', !value && 'text-muted-foreground')}>{value || placeholder}</span><CalendarDays aria-hidden="true" className="absolute right-3 size-4 text-muted-foreground" />
       </button></Popover.Trigger>
       <Popover.Portal><Popover.Content ref={calendar} align="start" sideOffset={6} collisionPadding={12} aria-labelledby={titleId}
@@ -95,7 +95,7 @@ export function DatePicker({ value, onValueChange, onBlur, min, max, placeholder
         <div className="mt-3 border-t pt-2"><Button type="button" variant="ghost" size="sm" disabled={empty || today < lower || today > upper} onClick={() => { onValueChange(today); setOpen(false) }}>今天</Button></div>
       </Popover.Content></Popover.Portal>
     </Popover.Root>
-    {clearable && value && !disabled && !readOnly && <button type="button" aria-label="清空日期" className="absolute right-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent disabled:hidden"
+    {clearable && value && !disabled && !readOnly && <button type="button" aria-label="清空日期" className="pointer-events-none opacity-0 group-hover/clear:pointer-events-auto group-hover/clear:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring absolute right-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent disabled:hidden"
       onMouseDown={(event) => event.preventDefault()} onClick={() => { wrapper.current?.querySelector<HTMLButtonElement>('[aria-haspopup]')?.focus(); onValueChange('') }}><X aria-hidden="true" className="size-4" /></button>}
   </div>
 }

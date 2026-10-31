@@ -99,7 +99,7 @@ export function PermissionActionDialog({ action, onClose, onSuccess }: IPermissi
                 <p className="break-all font-medium">{permission.name}</p>
                 <p className="mt-1 break-all text-muted-foreground">{permission.code}</p>
               </div>
-              <p className="text-sm">确定删除此权限吗？删除后无法恢复。此操作会删除该权限定义。</p>
+              <p className="text-sm">确定删除此权限吗？删除后无法恢复。被菜单或岗位引用时不能删除，请先解除关联。此操作会删除该权限定义。</p>
             </div>
           )
         )}

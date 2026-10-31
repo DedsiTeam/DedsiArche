@@ -1,14 +1,21 @@
 # DedsiArche 项目子智能体
 
-本目录按 [OpenAI 官方子智能体配置](https://learn.chatgpt.com/docs/agent-configuration/subagents) 定义三个项目级角色。每个 TOML 文件包含 `name`、`description` 与 `developer_instructions`，由支持项目自定义智能体的 Codex 加载。模型、推理强度与权限沿用父会话，不修改个人全局配置。
+本目录按 [OpenAI 官方子智能体配置](https://learn.chatgpt.com/docs/agent-configuration/subagents) 定义四个项目级角色。每个 TOML 文件包含 `name`、`description` 与 `developer_instructions`，由支持项目自定义智能体的 Codex 加载。模型、推理强度与权限沿用父会话，不修改个人全局配置。
 
 | 名称 | 配置 | 职责 |
 | --- | --- | --- |
+| `product_manager`（产研经理） | [product_manager.toml](product_manager.toml) | 需求统筹、领域方案用户确认、协调 ddd/backend/frontend 研发与交付 |
 | `backend` | [backend.toml](backend.toml) | Java API、认证、仓储、查询、迁移与后端实现 |
 | `frontend` | [frontend.toml](frontend.toml) | React 管理页面、公共组件、表单、交互与接口接入 |
 | `ddd` | [ddd.toml](ddd.toml) | 统一语言、聚合、不变量、状态转换、事务和领域建模审查 |
 
 ## 使用示例
+
+可以直接说：“请 product_manager 产研经理负责登录审计需求，先让 ddd 给出领域方案，等我确认后再安排 backend 和 frontend 开发。”
+
+产研经理流程：需求整理 → ddd 领域方案 → **用户明确确认** → 接口契约 → backend/frontend 实现与对接 → 领域复核与交付。确认前只做调研和设计，不提前写代码；确认后契约明确且文件不重叠的前后端工作可以并行。已批准方案发生实质领域变更时重新确认；同一已确认方案不重复审批。测试仍须遵循项目授权边界。
+
+产研经理可协调调用三个专业角色。若客户端限制嵌套分派，由父会话代为调用、转交结果和用户确认；并发不足时串行推进，不修改个人配置或假称已调用。新角色未被当前会话识别时，在本项目新开聊天后使用；配置落盘不代表当前会话已加载该角色。
 
 默认按根 AGENTS.md 的任务路由自动分派，无需每次点名。也可以在本项目的 Codex 聊天中明确指定角色和任务范围：
 

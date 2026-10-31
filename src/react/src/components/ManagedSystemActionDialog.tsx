@@ -98,7 +98,7 @@ export function ManagedSystemActionDialog({ action, onClose, onSuccess }: IManag
                 <p className="break-all font-medium">{system.name}</p>
                 <p className="mt-1 break-all text-muted-foreground">{system.code}</p>
               </div>
-              <p className="text-sm">确定删除此系统吗？删除后无法恢复。系统被权限或岗位引用时不能删除，即使岗位未配置权限也需先处理岗位引用。</p>
+              <p className="text-sm">确定删除此系统吗？删除后无法恢复。系统被权限、岗位、字典、组织或菜单引用时不能删除，即使岗位未配置权限也需先处理岗位引用。</p>
             </div>
           )
         )}

@@ -69,6 +69,7 @@ export function PermissionFormDialog({ permission, onClose, onSuccess }: IPermis
     },
     {
       name: 'name', label: '权限名称', required: true,
+      description: permission ? '修改名称会同步岗位权限与菜单权限快照，并更新相关版本；已打开的编辑窗口需要重新读取。' : undefined,
       inputProps: { maxLength: 100, autoComplete: 'off' },
       rules: { validate: (value) => validatePermissionText(String(value), '权限名称') || true },
     },

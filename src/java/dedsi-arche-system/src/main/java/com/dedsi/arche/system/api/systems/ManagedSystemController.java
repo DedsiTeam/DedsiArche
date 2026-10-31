@@ -4,6 +4,9 @@ import com.dedsi.arche.system.api.systems.request.*;
 import com.dedsi.arche.system.domain.systems.*;
 import com.dedsi.arche.system.domain.systems.query.*;
 import com.dedsi.arche.system.domain.permissions.IPermissionRepository;
+import com.dedsi.arche.system.domain.dictionaries.IDictionaryRepository;
+import com.dedsi.arche.system.domain.organizations.IOrganizationRepository;
+import com.dedsi.arche.system.domain.menus.IMenuRepository;
 import com.dedsi.arche.system.domain.positions.IPositionRepository;
 import com.dedsi.arche.system.domain.systems.events.SystemRegisteredEvent;
 import org.springframework.context.ApplicationEventPublisher;
@@ -35,6 +38,12 @@ public class ManagedSystemController {
     private final IPositionRepository positions;
     /* 在当前事务内同步发布领域事件。 */
     private final ApplicationEventPublisher events;
+    /* 字典所属系统删除保护。 */
+    private final IDictionaryRepository dictionaries;
+    /* 组织所属系统删除保护。 */
+    private final IOrganizationRepository organizations;
+    /* 菜单所属系统删除保护。 */
+    private final IMenuRepository menus;
 
     /** 注入仓储、只读查询和事务内刷新的实体管理器。 */
     public ManagedSystemController(
@@ -43,7 +52,10 @@ public class ManagedSystemController {
             IPermissionRepository permissions,
             EntityManager em,
             IPositionRepository positions,
-            ApplicationEventPublisher events
+            ApplicationEventPublisher events,
+            IDictionaryRepository dictionaries,
+            IOrganizationRepository organizations,
+            IMenuRepository menus
     ) {
         this.systems = systems;
         this.query = query;
@@ -51,6 +63,9 @@ public class ManagedSystemController {
         this.em = em;
         this.positions = positions;
         this.events = events;
+        this.dictionaries = dictionaries;
+        this.organizations = organizations;
+        this.menus = menus;
     }
 
     /** 提供管理页面的系统下拉选项，沿用类级管理员鉴权。 */
@@ -97,9 +112,9 @@ public class ManagedSystemController {
         return query.search(request.keyword(), request.status(), request.page(), request.size());
     }
 
-    /** 在同一事务内更名并同步权限冗余名称，同时推进权限版本以拒绝旧编辑。 */
+    /** 在同一事务内更名并同步实时名称引用，推进受影响聚合版本以拒绝旧编辑。 */
     @PatchMapping("/{id}")
-    @Operation(summary = "编辑系统", description = "version 必填；null/省略保留，说明和入口空串清除。系统改名同事务同步权限、岗位及岗位权限中的系统名称并推进版本。正常状态必须有入口。")
+    @Operation(summary = "编辑系统", description = "version 必填；null/省略保留，说明和入口空串清除。系统改名同事务同步权限、岗位及岗位权限、字典、组织、菜单中的系统名称并推进版本；用户岗位历史快照保持不变。正常状态必须有入口。")
     @Transactional
     public ManagedSystemDto update(
             @PathVariable String id,
@@ -118,16 +133,20 @@ public class ManagedSystemController {
         return dto(system);
     }
 
-    /** 有关联权限时拒绝删除，避免留下无所属系统的权限。 */
+    /** 有关联权限、岗位根、字典或组织时拒绝删除，避免留下无所属系统的节点。 */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "删除系统", description = "提交当前 version；有关联权限或岗位时返回 409。")
+    @Operation(summary = "删除系统", description = "提交当前 version；有关联权限、岗位、字典、组织或菜单时返回 409。")
     @Transactional
     public void delete(@PathVariable String id, @RequestParam @Min(0) long version) {
         var system = lock(id);
         checkVersion(system, version);
-        if (permissions.existsBySystemCode(system.getCode()) || positions.existsBySystemCode(system.getCode())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "系统下存在权限或岗位，不能删除");
+        if (permissions.existsBySystemCode(system.getCode())
+                || positions.existsBySystemCode(system.getCode())
+                || dictionaries.existsBySystemCode(system.getCode())
+                || organizations.existsBySystemCode(system.getCode())
+                || menus.existsBySystemCode(system.getCode())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "系统下存在权限、岗位、字典、组织或菜单，不能删除");
         }
         systems.delete(system);
         em.flush();

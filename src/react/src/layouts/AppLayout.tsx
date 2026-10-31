@@ -1,7 +1,7 @@
 import { notify } from '@/lib/notify'
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle, Monitor, BriefcaseBusiness } from 'lucide-react'
+import { History, ListTree, Building2, PanelLeftClose, PanelLeftOpen, Layers2, Users, Settings2, UserRound, LogOut, LogIn, LoaderCircle, Monitor, BriefcaseBusiness, BookOpen } from 'lucide-react'
 import { SidebarMenu, type SidebarMenuItem } from '@/components/SidebarMenu'
 import { Button } from '@/components/ui/button'
 
@@ -19,6 +19,10 @@ function Navigation({ collapsed }: { collapsed: boolean }) {
       { id: 'managed-systems', label: '系统管理', icon: Monitor, to: '/systems' },
       { id: 'permissions', label: '权限管理', icon: Settings2, to: '/permissions' },
       { id: 'positions', label: '岗位管理', icon: BriefcaseBusiness, to: '/positions' },
+      { id: 'menus', label: '菜单管理', icon: ListTree, to: '/menus' },
+      { id: 'organizations', label: '组织机构', icon: Building2, to: '/organizations' },
+      { id: 'dictionaries', label: '字典管理', icon: BookOpen, to: '/dictionaries' },
+      { id: 'login-audits', label: '登录审计', icon: History, to: '/login-audits' },
     ] }]
     : []
   return <>

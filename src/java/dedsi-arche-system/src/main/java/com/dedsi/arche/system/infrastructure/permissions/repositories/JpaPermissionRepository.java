@@ -52,6 +52,12 @@ public class JpaPermissionRepository implements IPermissionRepository {
         return delegate.findById(id);
     }
 
+    /** 菜单与岗位遵循相同权限读锁协议，防止保存旧名称或引用正在删除的权限。 */
+    @Override
+    public Optional<Permission> lockByIdForMenu(String id) {
+        return lockByIdForPosition(id);
+    }
+
     /** 与权限更名写锁协调；刷新一级缓存，避免等待锁后复制旧名称。 */
     @Override
     public Optional<Permission> lockByIdForPosition(String id) {

@@ -15,11 +15,11 @@ export function Textarea({ ref, className, clearable = true, clearLabel = 'æ¸…ç©
     form?.addEventListener('reset', reset)
     return () => { form?.removeEventListener('reset', reset); clearTimeout(timer) }
   }, [])
-  return <div className="relative w-full">
+  return <div className="group/clear relative w-full">
     <textarea {...props} ref={element} onChange={(event) => { setLocalValue(event.target.value); onChange?.(event) }}
-      className={cn('peer min-h-24 w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:bg-muted read-only:bg-muted aria-invalid:border-error aria-invalid:ring-error/20 disabled:cursor-not-allowed disabled:opacity-50', className, clearable && 'pr-11')} />
+      className={cn('peer min-h-24 w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/10 disabled:bg-muted read-only:bg-muted aria-invalid:border-error aria-invalid:focus-visible:border-error aria-invalid:focus-visible:ring-error/10 aria-invalid:ring-error/10 disabled:cursor-not-allowed disabled:opacity-50', className, clearable && 'pr-11')} />
     {clearable && String(value ?? '').length > 0 && !props.disabled && !props.readOnly && <button type="button" aria-label={clearLabel}
-      className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring peer-disabled:hidden"
+      className="pointer-events-none opacity-0 group-hover/clear:pointer-events-auto group-hover/clear:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 absolute right-1 top-1 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring peer-disabled:hidden"
       onMouseDown={(event) => event.preventDefault()} onClick={() => {
         const input = element.current
         if (!input || input.matches(':disabled') || input.readOnly) return

@@ -22,6 +22,9 @@ public interface IPermissionRepository {
     /** 锁定并刷新权限定义供岗位配置使用；调用方按权限 ID 顺序调用，锁持有到事务结束。 */
     Optional<Permission> lockByIdForPosition(String id);
 
+    /** 菜单绑定时读锁并刷新权限；调用方先持有所属系统锁。 */
+    Optional<Permission> lockByIdForMenu(String id);
+
     /**
      * 检查同一系统下的权限编码是否已存在。
      */

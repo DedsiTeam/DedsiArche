@@ -6,6 +6,10 @@ import com.dedsi.arche.system.api.users.response.*;
 import com.dedsi.arche.system.domain.users.*;
 import com.dedsi.arche.system.domain.users.query.IUserQuery;
 import com.dedsi.arche.system.infrastructure.users.security.TokenService;
+import com.dedsi.arche.system.infrastructure.loginaudits.security.LoginAuditContext;
+import com.dedsi.arche.system.infrastructure.loginaudits.security.LoginAuditWriter;
+import com.dedsi.arche.system.domain.loginaudits.LoginAuditReason;
+import jakarta.servlet.http.HttpServletRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,6 +50,8 @@ public class UserController {
 
     /* 访问令牌签发与刷新会话管理组件。 */
     private final TokenService tokens;
+    /* 成功审计与刷新会话共同提交。 */
+    private final LoginAuditWriter loginAudits;
 
     /* 账号不存在时仍执行密码校验的占位哈希，降低账号探测风险。 */
     private final String dummyHash;
@@ -58,12 +64,14 @@ public class UserController {
             IUserQuery query,
             PasswordEncoder passwords,
             TokenService tokens,
+            LoginAuditWriter loginAudits,
             com.dedsi.arche.system.infrastructure.users.security.UserAdministration administration
     ) {
         this.users = users;
         this.query = query;
         this.passwords = passwords;
         this.tokens = tokens;
+        this.loginAudits = loginAudits;
         this.administration = administration;
         dummyHash = passwords.encode(UUID.randomUUID().toString());
     }
@@ -105,8 +113,10 @@ public class UserController {
     public ResponseEntity<LoginResponse> login(
             @Valid
             @RequestBody
-            LoginRequest request
+            LoginRequest request,
+            HttpServletRequest servletRequest
     ) {
+        var audit = LoginAuditContext.require(servletRequest);
         User user = users.findByUsername(User.normalizeUsername(request.username())).orElse(null);
         boolean matches =
                 request.password().getBytes(StandardCharsets.UTF_8).length <= 72
@@ -114,10 +124,17 @@ public class UserController {
                                 request.password(),
                                 user == null ? dummyHash : user.getPasswordHash());
         if (user == null || !matches) {
+            audit.failed(LoginAuditReason.BAD_CREDENTIALS);
             throw new LoginFailedException();
         }
+        audit.identify(user);
+        if (!user.isEnabled()) {
+            audit.failed(LoginAuditReason.USER_DISABLED);
+        }
         user.ensureEnabled();
-        return loginResponse(user, tokens.issue(user.getId(), user.getCredentialVersion()));
+        var response = loginResponse(user, tokens.issue(user.getId(), user.getCredentialVersion()));
+        loginAudits.success(audit);
+        return response;
     }
 
     /**

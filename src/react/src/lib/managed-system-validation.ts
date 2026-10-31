@@ -54,13 +54,13 @@ export function managedSystemError(cause: unknown, operation: SystemOperation = 
     if (operation === 'delete') {
       // 仅识别已知业务说明，不向用户透传任意服务器错误文本。
       const detail = cause.response?.data?.detail
-      if (detail === '系统下存在权限，不能删除' || detail === '系统下存在岗位，不能删除' || detail === '系统下存在权限或岗位，不能删除') {
-        return '该系统仍被权限或岗位引用，不能删除。请先处理关联权限或岗位。'
+      if (detail === '系统下存在权限，不能删除' || detail === '系统下存在岗位，不能删除' || detail === '系统下存在权限或岗位，不能删除' || detail === '系统下存在权限、岗位、字典、组织或菜单，不能删除') {
+        return '该系统仍被权限、岗位、字典、组织或菜单引用，不能删除。请先处理关联权限、岗位、字典、组织或菜单。'
       }
       if (detail === '系统已被修改，请刷新后重试' || detail === '数据已变化，请重新读取后提交') {
         return '系统资料已变化，请关闭弹窗、刷新列表后重试。'
       }
-      return '无法删除：系统资料已变化或仍被权限、岗位引用。请刷新资料并检查关联权限和岗位。'
+      return '无法删除：系统资料已变化或仍被权限、岗位、字典、组织或菜单引用。请刷新资料并检查这些关联。'
     }
     return '系统资料已变化，请关闭弹窗、刷新列表后重试。'
   }

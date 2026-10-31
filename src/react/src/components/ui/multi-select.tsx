@@ -21,12 +21,12 @@ export function MultiSelect({ value, onValueChange, onBlur, options, placeholder
   const wrapper = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const summary = value.map((key) => options.find((item) => item.value === key)?.label ?? key).join('、')
-  return <div ref={wrapper} className="relative w-full">
+  return <div ref={wrapper} className="group/clear relative w-full">
     {name && value.map((item) => <input key={item} type="hidden" name={name} value={item} disabled={disabled} />)}
     <Popover.Root open={open && !disabled && !readOnly} onOpenChange={(next) => { if (!disabled && !readOnly) setOpen(next) }}>
       <Popover.Trigger asChild><button {...props} type="button" disabled={disabled} aria-readonly={readOnly}
         onBlur={() => { if (!open) onBlur?.() }}
-        className={cn('flex h-10 w-full items-center gap-2 rounded-lg border border-input bg-card pl-3 pr-20 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:bg-muted aria-readonly:bg-muted aria-invalid:border-error disabled:cursor-not-allowed disabled:opacity-50', className)}>
+        className={cn('flex h-10 w-full items-center gap-2 rounded-lg border border-input bg-card pl-3 pr-20 text-left text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/10 disabled:bg-muted aria-readonly:bg-muted aria-invalid:border-error aria-invalid:focus-visible:border-error aria-invalid:focus-visible:ring-error/10 disabled:cursor-not-allowed disabled:opacity-50', className)}>
         <span className={cn('truncate', !value.length && 'text-muted-foreground')} title={summary}>{summary || placeholder}</span>
         <ChevronDown aria-hidden="true" className="absolute right-3 size-4 text-muted-foreground" />
       </button></Popover.Trigger>
@@ -44,7 +44,7 @@ export function MultiSelect({ value, onValueChange, onBlur, options, placeholder
         </div>
       </Popover.Content></Popover.Portal>
     </Popover.Root>
-    {clearable && value.length > 0 && !disabled && !readOnly && <button type="button" aria-label="清空选择" className="absolute right-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent disabled:hidden"
+    {clearable && value.length > 0 && !disabled && !readOnly && <button type="button" aria-label="清空选择" className="pointer-events-none opacity-0 group-hover/clear:pointer-events-auto group-hover/clear:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring absolute right-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent disabled:hidden"
       onMouseDown={(event) => event.preventDefault()} onClick={() => { wrapper.current?.querySelector<HTMLButtonElement>('[aria-haspopup]')?.focus(); onValueChange([]) }}><X aria-hidden="true" className="size-4" /></button>}
   </div>
 }

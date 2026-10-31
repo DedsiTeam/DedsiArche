@@ -50,7 +50,7 @@ export function ManagedSystemFormDialog({ system, onClose, onSuccess }: IManaged
   const fields: FormFieldConfig<SystemFormValues>[] = [
     {
       name: 'name', label: '系统名称', required: true,
-      description: system ? '修改名称后，会同步相关权限、岗位及岗位权限中的系统名称。已打开的编辑窗口需要重新读取。' : undefined,
+      description: system ? '修改名称后，会同步相关权限、岗位、岗位权限、字典、组织及菜单中的系统名称。已打开的编辑窗口需要重新读取。' : undefined,
       inputProps: { maxLength: 100, autoComplete: 'off' },
       rules: { validate: (value) => validateSystemText(String(value), '系统名称') || true },
     },

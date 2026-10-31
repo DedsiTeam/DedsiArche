@@ -1,6 +1,8 @@
 package com.dedsi.arche.system.api.permissions;
 
 import com.dedsi.arche.system.domain.permissions.*;
+import com.dedsi.arche.system.domain.menus.IMenuRepository;
+import jakarta.persistence.EntityNotFoundException;
 import com.dedsi.arche.system.domain.permissions.query.*;
 import com.dedsi.arche.system.api.permissions.request.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 @PreAuthorize("@userAdministration.canManage(authentication)")
 public class PermissionController {
     private final IPermissionRepository permissions;
+    /* 权限删除前检查菜单引用。 */
+    private final IMenuRepository menus;
     private final IPermissionQuery query;
     private final com.dedsi.arche.system.domain.systems.IManagedSystemRepository systems;
     private final jakarta.persistence.EntityManager em;
@@ -40,9 +44,11 @@ public class PermissionController {
             IPermissionQuery query,
             com.dedsi.arche.system.domain.systems.IManagedSystemRepository systems,
             jakarta.persistence.EntityManager em,
-            ApplicationEventPublisher events
+            ApplicationEventPublisher events,
+            IMenuRepository menus
     ) {
         this.permissions = permissions;
+        this.menus = menus;
         this.query = query;
         this.systems = systems;
         this.em = em;
@@ -124,7 +130,17 @@ public class PermissionController {
     @Transactional
     public void delete(@PathVariable String id, @RequestParam @Min(0) long version) {
         var permission = find(id);
+        // 历史权限可能未登记系统，此路径仍允许删除；已登记系统必须先锁系统再锁权限。
+        systems.lockByCode(permission.getSystemCode());
+        try {
+            em.refresh(permission, LockModeType.PESSIMISTIC_WRITE);
+        } catch (EntityNotFoundException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "权限已变化，请重新读取后提交");
+        }
         checkVersion(permission, version);
+        if (menus.existsByPermissionId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "权限已被菜单引用，请先解除菜单权限关联");
+        }
         permissions.delete(permission);
         permissions.flush();
     }

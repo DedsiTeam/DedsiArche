@@ -2,6 +2,7 @@ package com.dedsi.arche.system.infrastructure.positions.events;
 
 import com.dedsi.arche.system.domain.permissions.events.PermissionRenamedEvent;
 import com.dedsi.arche.system.domain.positions.IPositionRepository;
+import com.dedsi.arche.system.domain.menus.IMenuRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -12,10 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class PermissionRenamedListener {
     /* 完整岗位聚合仓储，子实体不独立写入。 */
     private final IPositionRepository positions;
+    /* 岗位之后更新菜单，保持全局写入顺序。 */
+    private final IMenuRepository menus;
 
     /** 注入聚合仓储。 */
-    public PermissionRenamedListener(IPositionRepository positions) {
+    public PermissionRenamedListener(IPositionRepository positions, IMenuRepository menus) {
         this.positions = positions;
+        this.menus = menus;
     }
 
     /**
@@ -28,6 +32,10 @@ public class PermissionRenamedListener {
         for (var position : positions.findAllByPermissionId(event.permissionId())) {
             position.synchronizePermissionName(event.permissionId(), event.name());
             positions.flush();
+        }
+        for (var menu : menus.findAllByPermissionId(event.permissionId())) {
+            menu.synchronizePermissionName(event.permissionId(), event.name());
+            menus.flush();
         }
     }
 }
