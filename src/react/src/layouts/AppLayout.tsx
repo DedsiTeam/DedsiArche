@@ -6,7 +6,7 @@ import { SidebarMenu, type SidebarMenuItem } from '@/components/SidebarMenu'
 import { Button } from '@/components/ui/button'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 import { cn } from '@/lib/utils'
 import { logout, useSession } from '@/services/auth'
@@ -59,7 +59,7 @@ export function AppLayout() {
               {!collapsed && <span className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</span>}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-60 rounded-xl p-1.5 shadow-lg">
+          <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-52 rounded-xl p-1.5 shadow-lg">
             <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-3">
               <Avatar className="size-9 shrink-0"><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{session ? displayName.slice(0, 2).toUpperCase() : 'DA'}</AvatarFallback></Avatar>
               <span className="min-w-0 flex-1">
@@ -67,7 +67,6 @@ export function AppLayout() {
                 <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground" title={session?.user.username}>{session ? session.user.username : '尚未登录'}</span>
               </span>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className="mx-2 my-1" />
             <DropdownMenuItem asChild className="h-9 cursor-pointer gap-3 rounded-md px-2.5 focus:bg-primary/10">
               <Link to="/"><UserRound className="size-4" />账户中心</Link>
             </DropdownMenuItem>

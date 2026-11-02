@@ -68,9 +68,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--color-ring); ou
   color: var(--color-foreground);
 }
 .desktop-sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); display: flex; flex-direction: column; overflow: hidden; }
-.desktop-workspace { margin-left: var(--sidebar-width); height: 100dvh; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.desktop-workspace { margin-left: var(--sidebar-width); height: 100dvh; overflow-y: auto; overflow-x: hidden; }
 .desktop-shell[data-collapsed="true"] { --sidebar-width: 72px; }
-.page-padding { padding: var(--page-padding) 24px; width: 100%; }
+.page-padding { padding: var(--page-padding) 16px; width: 100%; }
 @media (max-width: 1279px) { :root { --sidebar-width: 208px; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
