@@ -1,6 +1,5 @@
 package com.dedsi.arche.system.api.users;
 
-import com.dedsi.arche.common.exception.BusinessException;
 import com.dedsi.arche.system.api.users.request.*;
 import com.dedsi.arche.system.api.users.response.*;
 import com.dedsi.arche.system.domain.users.*;
@@ -33,7 +32,7 @@ import java.util.UUID;
 /**
  * 用例编排、事务边界和 HTTP 转换均在 API 层完成。
  */
-@Tag(name = "用户", description = "用户注册、认证及个人资料")
+@Tag(name = "用户", description = "用户认证及个人资料")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -74,34 +73,6 @@ public class UserController {
         this.loginAudits = loginAudits;
         this.administration = administration;
         dummyHash = passwords.encode(UUID.randomUUID().toString());
-    }
-
-    /**
-     * 校验注册信息和账号唯一性，加密密码后保存用户。
-     */
-    @Operation(summary = "注册用户", description = "账号为 3～50 位英文字母、数字或下划线；密码至少 12 字符，UTF-8 最多 72 字节。")
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Transactional
-    public UserResponse register(
-            @Valid
-            @RequestBody
-            RegisterUserRequest request
-    ) {
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new BusinessException("PASSWORD_TOO_LONG", "密码 UTF-8 编码最多 72 字节");
-        }
-        if (users.findByUsername(User.normalizeUsername(request.username())).isPresent()) {
-            throw new BusinessException("USERNAME_EXISTS", "账号已存在");
-        }
-        User user =
-                users.save(
-                        User.register(
-                                request.username(),
-                                request.displayName(),
-                                passwords.encode(request.password())));
-        user.updateContact(request.phone(), request.email());
-        return response(user);
     }
 
     /**

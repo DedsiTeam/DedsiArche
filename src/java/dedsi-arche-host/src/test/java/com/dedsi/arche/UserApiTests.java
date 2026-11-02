@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.dedsi.arche.system.domain.users.IUserRepository;
+import com.dedsi.arche.system.domain.users.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,32 +38,18 @@ class UserApiTests {
     @Autowired
     IUserRepository users;
 
+    /* 通过仓储准备测试账号，不依赖公开注册接口。 */
+    @Autowired
+    PasswordEncoder passwords;
+
     /**
-     * 验证注册、登录、JWT 验签、资料持久化及刷新令牌轮换和撤销。
+     * 验证登录、JWT 验签、资料持久化及刷新令牌轮换和撤销。
      */
     @Test
     void authenticationAndDirtyChecking() throws Exception {
         mvc.perform(get("/api/users/me")).andExpect(status().isUnauthorized());
-        mvc.perform(
-                        post("/api/users/register")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"alice\","
-                                                + "\"displayName\":\"Alice\","
-                                                + "\"password\":\"a-long-password-123\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
-        assertThat(users.findByUsername("alice").orElseThrow().getPasswordHash())
-                .startsWith("$2")
-                .doesNotContain("a-long-password");
-        mvc.perform(
-                        post("/api/users/register")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"ALICE\","
-                                                + "\"displayName\":\"Again\","
-                                                + "\"password\":\"a-long-password-123\"}"))
-                .andExpect(status().isConflict());
+        users.save(
+                User.register("alice", "Alice", passwords.encode("a-long-password-123")));
         mvc.perform(
                         post("/api/users/login")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -132,16 +120,19 @@ class UserApiTests {
     }
 
     /**
-     * 验证不符合字段约束的注册请求返回 HTTP 400。
+     * 验证匿名请求不能通过已删除的公开注册入口创建账号。
      */
     @Test
-    void invalidRegistrationRejected() throws Exception {
+    void publicRegistrationIsUnavailable() throws Exception {
         mvc.perform(
                         post("/api/users/register")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                        "{\"username\":\"x\",\"displayName\":\"\",\"password\":\"short\"}"))
-                .andExpect(status().isBadRequest());
+                                        "{\"username\":\"registration_closed\","
+                                                + "\"displayName\":\"Closed\","
+                                                + "\"password\":\"a-long-password-123\"}"))
+                .andExpect(status().isUnauthorized());
+        assertThat(users.findByUsername("registration_closed")).isEmpty();
     }
 
     /**

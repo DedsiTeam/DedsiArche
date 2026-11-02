@@ -64,7 +64,8 @@ class OpenApiTests {
                 .andExpect(jsonPath("$.paths['/api/users/login'].post.summary").value("账号密码登录"));
         mvc.perform(get("/v3/api-docs/system"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths['/api/users/register']").exists());
+                .andExpect(jsonPath("$.paths['/api/users/register']").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/users/login']").exists());
         mvc.perform(get("/api/users/me")).andExpect(status().isUnauthorized());
     }
 }

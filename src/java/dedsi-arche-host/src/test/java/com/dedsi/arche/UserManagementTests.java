@@ -1,6 +1,9 @@
 package com.dedsi.arche;
 
 import org.junit.jupiter.api.Test;
+import com.dedsi.arche.system.domain.users.IUserRepository;
+import com.dedsi.arche.system.domain.users.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -22,6 +25,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserManagementTests {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
+    @Autowired
+    IUserRepository users;
+    @Autowired
+    PasswordEncoder passwords;
     JsonNode send(MockHttpServletRequestBuilder request, Object body, int status) throws Exception {
         if(body!=null) request.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body));
         var result=mvc.perform(request).andExpect(status().is(status)).andReturn();
@@ -30,14 +37,21 @@ class UserManagementTests {
     }
     @Test void managementIsRestrictedAndUpdatesArePersisted() throws Exception {
         String password="Management#2026!";
-        var admin=send(post("/api/users/register"),Map.of("username","manager_test","displayName","Manager","password",password),201);
+        // 管理员测试夹具直接通过仓储建立；业务新增仍验证受保护的管理接口。
+        var admin = users.save(
+                User.register("manager_test", "Manager", passwords.encode(password)));
         var login=send(post("/api/users/login"),Map.of("username","manager_test","password",password),200);
         assertThat(login.path("user").path("canManageUsers").asBoolean()).isTrue();
         String bearer="Bearer "+login.path("accessToken").asText();
         String name="managed_"+UUID.randomUUID().toString().replace("-","").substring(0,10);
+        send(post("/api/users").header("Authorization", bearer),
+                Map.of("username", "x", "displayName", "", "password", "short"), 400);
         send(post("/api/users/page"),Map.of(),401);
         var created=send(post("/api/users").header("Authorization",bearer),Map.of("username",name,"displayName","Managed","password",password),201);
         String id=created.path("id").asText();
+        send(post("/api/users").header("Authorization", bearer),
+                Map.of("username", name.toUpperCase(java.util.Locale.ROOT),
+                        "displayName", "Duplicate", "password", password), 409);
         var normal=send(post("/api/users/login"),Map.of("username",name,"password",password),200);
         String normalBearer="Bearer "+normal.path("accessToken").asText();
         assertThat(normal.path("user").path("canManageUsers").asBoolean()).isFalse();
@@ -49,7 +63,7 @@ class UserManagementTests {
         var page=send(post("/api/users/page").header("Authorization",bearer),Map.of("keyword",name),200);
         assertThat(page.path("total").asLong()).isEqualTo(1);
         assertThat(page.toString()).doesNotContain("passwordHash","password_hash","refreshToken");
-        send(patch("/api/users/"+admin.path("id").asText()).header("Authorization",bearer),Map.of("displayName","Manager","enabled",false,"version",0),400);
+        send(patch("/api/users/"+admin.getId().toString()).header("Authorization",bearer),Map.of("displayName","Manager","enabled",false,"version",0),400);
         var changed=send(patch("/api/users/"+id).header("Authorization",bearer),Map.of("displayName","Updated","enabled",false,"version",0),200);
         assertThat(changed.path("version").asLong()).isEqualTo(1);
         send(get("/api/users/me").header("Authorization",normalBearer),null,401);
@@ -66,7 +80,7 @@ class UserManagementTests {
         send(get("/api/users/"+id).header("Authorization",validNormal),null,403);
         send(post("/api/users/"+id+"/reset-password").header("Authorization",validNormal),Map.of("password","Reset#2026!Password","version",2),403);
         send(delete("/api/users/"+id).param("version","2").header("Authorization",validNormal),null,403);
-        send(delete("/api/users/"+admin.path("id").asText()).param("version","0").header("Authorization",bearer),null,400);
+        send(delete("/api/users/"+admin.getId().toString()).param("version","0").header("Authorization",bearer),null,400);
         send(post("/api/users/"+id+"/reset-password").header("Authorization",bearer),Map.of("password","short","version",2),400);
         send(post("/api/users/"+id+"/reset-password").header("Authorization",bearer),Map.of("password","中".repeat(25),"version",2),400);
         send(post("/api/users/"+id+"/reset-password").header("Authorization",bearer),Map.of("password","Reset#2026!Password","version",0),409);

@@ -30,7 +30,6 @@ API 负责事务、用例编排和 DTO 转换；Domain 放实体、仓储契约�
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
-| POST | /dedsi-arche-api/api/users/register | username、displayName、password 注册 |
 | POST | /dedsi-arche-api/api/users/login | username、password 登录 |
 | POST | /dedsi-arche-api/api/users/refresh | refreshToken 换取新令牌 |
 | POST | /dedsi-arche-api/api/users/logout | refreshToken 注销刷新会话 |
@@ -40,8 +39,8 @@ API 负责事务、用例编排和 DTO 转换；Domain 放实体、仓储契约�
 用户名为 3～50 位英文字母、数字、下划线，统一小写。密码 12～64 字符，UTF-8 最多 72 字节，BCrypt 存储。
 JWT 有效期 15 分钟；刷新令牌有效期 7 天，数据库仅存 SHA-256，刷新时旧令牌撤销且新令牌生成在同一事务内。
 并发刷新通过数据库悲观锁实现只消费一次。注销不立即撤销已签发 JWT，其在过期前仍有效。
-认证入口公开；当前用户接口要求 profile scope。Flyway V8 会在账号不存在时创建默认账号 `dedsi_user`，使用约定初始密码的 BCrypt 哈希；不覆盖已有账号。管理员由 `USER_ADMIN_USERNAMES` 配置指定，没有角色管理功能。
-此模板不内置登录限流，公开部署前应在网关增加限流并评估注册是否开放。令牌使用 HTTPS 传输，避免写入日志。
+登录、刷新和注销入口公开；当前用户接口要求 profile scope。公开注册接口已删除，新增账号须由管理员调用 POST /dedsi-arche-api/api/users。Flyway V8 会在账号不存在时创建默认账号 `dedsi_user`，使用约定初始密码的 BCrypt 哈希；不覆盖已有账号。管理员由 `USER_ADMIN_USERNAMES` 配置指定，没有角色管理功能。
+此模板不内置登录限流，公开部署前应在网关增加限流。令牌使用 HTTPS 传输，避免写入日志。
 客户端令牌通过响应体返回；若改为 Cookie 传递凭据，需重新设计 CSRF 策略。
 
 ## 数据与 Redis
@@ -87,7 +86,7 @@ Redis 密码、数据库密码更换后需同步更新现有实例；已有 Post
 ## Scalar 接口文档
 
 启动 Host 后访问 `http://localhost:11518/dedsi-arche-api/scalar`，OpenAPI JSON 位于 `/dedsi-arche-api/v3/api-docs`，System 分组位于 `/dedsi-arche-api/v3/api-docs/system`。
-通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
+使用已有账号调用登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
 默认开启文档，设置环境变量 `DOCS_ENABLED=false` 可同时关闭页面与 OpenAPI 端点。
 采用 springdoc-openapi 3.2.0 的 WebMVC Scalar Starter，不使用 Swagger UI。
 Host 定义标题和认证方案，业务模块在 Controller/DTO 上声明中文说明，并通过 GroupedOpenApi 注册分组。

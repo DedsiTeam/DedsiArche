@@ -106,7 +106,7 @@ mvn archetype:generate `
 ## Scalar 接口文档
 
 启动 Host 后访问 `http://localhost:11518/dedsi-arche-api/scalar`，OpenAPI JSON 位于 `/dedsi-arche-api/v3/api-docs`，System 分组位于 `/dedsi-arche-api/v3/api-docs/system`。
-通过页面调用注册和登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
+使用已有账号调用登录接口，复制返回的 `accessToken`，填入 Scalar 的 Bearer 认证框，再调试 `/dedsi-arche-api/api/users/me`；不要重复填写 `Bearer ` 前缀。
 默认开启文档，设置环境变量 `DOCS_ENABLED=false` 可同时关闭页面与 OpenAPI 端点。
 采用 springdoc-openapi 3.2.0 的 WebMVC Scalar Starter，不使用 Swagger UI。
 Host 定义标题和认证方案，业务模块在 Controller/DTO 上声明中文说明，并通过 GroupedOpenApi 注册分组。
@@ -273,7 +273,7 @@ Flyway V11 为岗位根新增可空 system_code/system_name、成对空值检查
 
 User 仍使用 UUID 主键，新增其私有的一组 UserPosition 子实体。每项包含 id（26 位 ULID）、userId（UUID）、positionId（26 位 ULID）以及 positionCode、positionName、systemCode、systemName 四个配置时快照。岗位仍是独立聚合，用户仅持有关联与快照，不包含岗位权限子实体。历史岗位所属系统未登记时，两个系统快照均为 null；不根据权限推测归属。
 
-管理员新增请求使用独立 CreateManagedUserRequest，支持可选 positionIds；省略或 null 默认为空。公开 `/api/users/register` 继续使用原 RegisterUserRequest，不能借此分配岗位。管理员 PATCH 保留姓名 displayName、enabled、version 必填契约，positionIds 省略/null 保持、空数组清空、非空列表全量替换并刷新快照；同一岗位不能重复，缺失或非法岗位返回 400。允许维护停用岗位关联，岗位配置不自动改变管理员身份、登录权限或后端权限码判定。
+管理员新增请求使用独立 CreateManagedUserRequest，支持可选 positionIds；省略或 null 默认为空。公开注册接口已删除，新账号仅通过管理员新增接口创建。管理员 PATCH 保留姓名 displayName、enabled、version 必填契约，positionIds 省略/null 保持、空数组清空、非空列表全量替换并刷新快照；同一岗位不能重复，缺失或非法岗位返回 400。允许维护停用岗位关联，岗位配置不自动改变管理员身份、登录权限或后端权限码判定。
 
 | 方法 | 路径 | 用户岗位契约 |
 | --- | --- | --- |
@@ -497,7 +497,7 @@ DIRECTORY 不允许 routePath/componentPath，cache/affix 必须 false；PAGE ro
 
 LoginAudit 是独立不可变事实，id 使用 ULID，无 version、修改或删除入口。记录 loginTime（北京时间）、result（SUCCESS/FAILURE）、reasonCode（LOGIN_SUCCEEDED/BAD_CREDENTIALS/USER_DISABLED/INVALID_REQUEST/SERVICE_ERROR）、loginAccount、userId（UUID 逻辑引用，可空）、displayName 历史快照、clientIp、userAgent、failureMessage 和 traceId。用户删除不级联审计，用户改名不更新历史姓名；与系统/权限名称事件无关。
 
-仅 `POST /api/users/login` 的实际登录处理器记录审计，不扩展到注册、令牌刷新、注销或其他接口。成功事实与刷新会话在原登录事务中共同保存并 flush，任何写入/提交失败都不返回成功令牌；afterCommit 仅标记事务已提交，不再次写库。事务提交后响应序列化或客户端断开不将已成功认证改记失败。
+仅 `POST /api/users/login` 的实际登录处理器记录审计，不扩展到用户新增、令牌刷新、注销或其他接口。成功事实与刷新会话在原登录事务中共同保存并 flush，任何写入/提交失败都不返回成功令牌；afterCommit 仅标记事务已提交，不再次写库。事务提交后响应序列化或客户端断开不将已成功认证改记失败。
 
 MVC 拦截器在参数解析前建立请求专属上下文，完成回调在事务代理之外统一记录失败，调用独立 Spring Bean 的 REQUIRES_NEW 方法并在代理外捕获写入/提交异常。错误密码、停用用户保留既有外部响应；JSON、参数校验及不支持媒体类型的 400/415 记录 INVALID_REQUEST，服务与提交失败记录 SERVICE_ERROR。失败审计不可用时仍拒绝登录，仅输出服务端 traceId 脱敏告警，不包含异常堆栈、SQL、请求或凭据。同次尝试共用审计主键，提交结果不明时主键防止成功/失败重复事实。
 

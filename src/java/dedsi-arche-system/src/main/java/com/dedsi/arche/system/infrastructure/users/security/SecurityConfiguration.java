@@ -136,7 +136,6 @@ public class SecurityConfiguration {
                         a ->
                                 a.requestMatchers(
                                                 HttpMethod.POST,
-                                                "/api/users/register",
                                                 "/api/users/login",
                                                 "/api/users/refresh",
                                                 "/api/users/logout")
